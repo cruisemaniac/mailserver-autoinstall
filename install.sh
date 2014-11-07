@@ -35,7 +35,7 @@ CPURPLE="${CSI}1;35m"
 CCYAN="${CSI}1;36m"
 CBROWN="${CSI}0;33m"
 
-POSTFIXADMIN_VER="2.91"
+POSTFIXADMIN_VER="2.92"
 
 # ##########################################################################
 

@@ -368,6 +368,19 @@ if [ "$PASSWDPATH" = "" ]; then
     PASSWDPATH="/etc/nginx/passwd"
 fi
 
+if [ $(cat $PASSWDPATH) == '' ]; then
+    USERAUTH="Admin"
+    PASSWDAUTH="1234"
+    echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
+    echo -e "${CCYAN} Votre fichier ${PASSWDPATH} est vide ou n'existe pas. Veuillez entrer les informations suivantes.${CEND}"
+    read -p "> Web Auth User [Par défaut : Admin] : " USERAUTH
+    read -p "> Web Auth Password [Par défaut : 1234] : " PASSWDAUTH
+    echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
+    printf "${USERAUTH}:$(openssl passwd -crypt ${PASSWDAUTH})\n" >> $PASSWDPATH
+    smallLoader
+    echo ""
+fi
+
 echo -e "${CGREEN}-> Ajout du vhost postfixadmin ${CEND}"
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF

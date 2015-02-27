@@ -76,6 +76,9 @@ command -v wget > /dev/null 2>&1 || { echo `checkBin wget` >&2; exit 1; }
 command -v tar > /dev/null 2>&1 || { echo `checkBin tar` >&2; exit 1; }
 command -v openssl > /dev/null 2>&1 || { echo `checkBin openssl` >&2; exit 1; }
 command -v unzip > /dev/null 2>&1 || { echo `checkBin unzip` >&2; exit 1; }
+command -v strings > /dev/null 2>&1 || { echo `checkBin binutils` >&2; exit 1; }
+command -v nginx > /dev/null 2>&1 || { echo `checkBin nginx/LEMP` >&2; exit 1; }
+command -v git > /dev/null 2>&1 || { echo `checkBin git-core` >&2; exit 1; }
 
 # ##########################################################################
 
@@ -130,6 +133,7 @@ echo ""
 DOMAIN=$(hostname -d 2> /dev/null)   # domain.tld
 HOSTNAME=$(hostname -s 2> /dev/null) # hostname
 FQDN=$(hostname -f 2> /dev/null)     # hostname.domain.tld
+let PORT=80			     # port du serveur web en écoute
 
 # Récupération de l'adresse IP WAN
 WANIP=$(dig +short myip.opendns.com @resolver1.opendns.com)
@@ -147,6 +151,7 @@ echo -e "DOMAINE    : ${CGREEN}${DOMAIN}${CEND}"
 echo -e "NOM D'HOTE : ${CGREEN}${HOSTNAME}${CEND}"
 echo -e "FQDN       : ${CGREEN}${FQDN}${CEND}"
 echo -e "IP WAN     : ${CGREEN}${WANIP}${CEND}"
+echo -e "PORT WEB   : ${CGREEN}${PORT}${CEND}"
 echo ""
 echo -e "${CCYAN}-----------------------------------------------------------------------${CEND}"
 echo ""
@@ -158,6 +163,7 @@ if [[ "$REPFQDN" = "O" ]] || [[ "$REPFQDN" = "o" ]]; then
 echo ""
 read -p "> Veuillez saisir le nom d'hôte : " HOSTNAME
 read -p "> Veuillez saisir le nom de domaine (format: domain.tld) : " DOMAIN
+read -p "> Veuillez saisir le port du serveur web en écoute : " PORT
 
 FQDN="${HOSTNAME}.${DOMAIN}"
 
@@ -179,6 +185,7 @@ echo -e "DOMAINE    : ${CGREEN}${DOMAIN}${CEND}"
 echo -e "NOM D'HOTE : ${CGREEN}${HOSTNAME}${CEND}"
 echo -e "FQDN       : ${CGREEN}${FQDN}${CEND}"
 echo -e "IP WAN     : ${CGREEN}${WANIP}${CEND}"
+echo -e "PORT WEB   : ${CGREEN}${PORT}${CEND}"
 echo ""
 echo -e "${CCYAN}-----------------------------------------------------------------------${CEND}"
 echo ""
@@ -197,8 +204,12 @@ echo -e "${CCYAN}[  SSL Configuration - Cert ]${CEND}"
 echo -e "${CCYAN}-----------------------------${CEND}"
 echo ""
 
-mkdir -p /etc/nginx/ssl
-openssl req -new -x509 -days 3658 -nodes -newkey rsa:2048 -out /etc/nginx/ssl/server.crt -keyout /etc/nginx/ssl/server.key<<EOF
+# Si on a redirigé le port 80 vers un autre port, cela peut vouloir dire que le 443 n'est pas non plus accessible, NAT, VM, ...
+# On demande si on veut faire du HTTPS 
+read -p "Souhaitez-vous utiliser le SSL (https - port 443) pour les interfaces web ? [o]/n : " SSL_OK
+if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
+	mkdir -p /etc/nginx/ssl
+	openssl req -new -x509 -days 3658 -nodes -newkey rsa:2048 -out /etc/nginx/ssl/server.crt -keyout /etc/nginx/ssl/server.key<<EOF
 FR
 
 
@@ -207,6 +218,7 @@ FR
 ${DOMAIN}
 contact@${DOMAIN}
 EOF
+fi
 
 echo ""
 echo -e "${CCYAN}-----------------------------${CEND}"
@@ -217,7 +229,7 @@ echo ""
 echo -e "${CGREEN}-> Installation de postfix, postfix-mysql et PHP-IMAP ${CEND}"
 echo ""
 
-apt-get install -y postfix postfix-mysql php5-imap
+apt-get install -y postfix postfix-mysql php5-imap php5-curl   # php5-curl pour rainloop
 
 if [ $? -ne 0 ]; then
     echo ""
@@ -357,47 +369,73 @@ if [ "$PASSWDPATH" = "" ]; then
 fi
 
 echo -e "${CGREEN}-> Ajout du vhost postfixadmin ${CEND}"
-cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF
-server {
-  listen          80;
-  server_name     ${PFADOMAIN}.${DOMAIN};
-  return 301      https://\$server_name\$request_uri; # enforce https
-}
-
-server {
-    listen          443 ssl;
-    server_name     ${PFADOMAIN}.${DOMAIN};
-    root            /var/www/postfixadmin;
-    index           index.php;
-    charset         utf-8;
-
-    ## SSL settings
-    ssl_certificate           /etc/nginx/ssl/server.crt;
-    ssl_certificate_key       /etc/nginx/ssl/server.key;
-    ssl_protocols             TLSv1.2;
-    ssl_ciphers               "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
-    ssl_prefer_server_ciphers on;
-    ssl_session_cache         shared:SSL:10m;
-    ssl_session_timeout       10m;
-    ssl_ecdh_curve            secp521r1;
-
-    add_header Strict-Transport-Security max-age=31536000;
-
-    auth_basic "PostfixAdmin - Connexion";
-    auth_basic_user_file ${PASSWDPATH};
-
-    location / {
-        try_files \$uri \$uri/ index.php;
-    }
-
-    location ~* \.php$ {
-        include       /etc/nginx/fastcgi_params;
-        fastcgi_pass  unix:/var/run/php5-fpm.sock;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-    }
-}
+if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
+	cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF
+	server {
+	  listen          ${PORT};
+	  server_name     ${PFADOMAIN}.${DOMAIN};
+	  return 301      https://\$server_name\$request_uri; # enforce https
+	}
+	
+	server {
+	    listen          443 ssl;
+	    server_name     ${PFADOMAIN}.${DOMAIN};
+	    root            /var/www/postfixadmin;
+	    index           index.php;
+	    charset         utf-8;
+	
+	    ## SSL settings
+	    ssl_certificate           /etc/nginx/ssl/server.crt;
+	    ssl_certificate_key       /etc/nginx/ssl/server.key;
+	    ssl_protocols             TLSv1.2;
+	    ssl_ciphers               "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
+	    ssl_prefer_server_ciphers on;
+	    ssl_session_cache         shared:SSL:10m;
+	    ssl_session_timeout       10m;
+	    ssl_ecdh_curve            secp521r1;
+	
+	    add_header Strict-Transport-Security max-age=31536000;
+	
+	    auth_basic "PostfixAdmin - Connexion";
+	    auth_basic_user_file ${PASSWDPATH};
+	
+	    location / {
+	        try_files \$uri \$uri/ index.php;
+	    }
+	
+	    location ~* \.php$ {
+	        include       /etc/nginx/fastcgi_params;
+	        fastcgi_pass  unix:/var/run/php5-fpm.sock;
+	        fastcgi_index index.php;
+	        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+	    }
+	}
 EOF
+else 
+	cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF
+	server {
+	  listen          ${PORT};
+	  server_name     ${PFADOMAIN}.${DOMAIN};
+	  root            /var/www/postfixadmin;
+	  index           index.php;
+	  charset         utf-8;
+	  
+	  auth_basic "PostfixAdmin - Connexion";
+	  auth_basic_user_file ${PASSWDPATH};
+	
+	  location / {
+	      try_files \$uri \$uri/ index.php;
+	  }
+	
+	  location ~* \.php$ {
+	      include       /etc/nginx/fastcgi_params;
+	      fastcgi_pass  unix:/var/run/php5-fpm.sock;
+	      fastcgi_index index.php;
+	      fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+	  }
+	}
+EOF
+fi
 
 echo -e "${CGREEN}-> Redémarrage de PHP-FPM.${CEND}"
 service php5-fpm restart
@@ -932,51 +970,84 @@ if [ "$RAINLOOPDOMAIN" = "" ]; then
 fi
 
 echo -e "${CGREEN}-> Ajout du vhost rainloop ${CEND}"
-cat > /etc/nginx/sites-enabled/rainloop.conf <<EOF
-server {
-	listen 			80;
-	server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
-	return 301 		https://\$server_name\$request_uri; # enforce https
-}
-
-server {
-    listen          443 ssl;
-    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
-    root            /var/www/rainloop;
-    index           index.php;
-    charset         utf-8;
-
-    ## SSL settings
-    ssl_certificate           /etc/nginx/ssl/server.crt;
-    ssl_certificate_key       /etc/nginx/ssl/server.key;
-    ssl_protocols             TLSv1.2;
-    ssl_ciphers               "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
-    ssl_prefer_server_ciphers on;
-    ssl_session_cache         shared:SSL:10m;
-    ssl_session_timeout       10m;
-    ssl_ecdh_curve            secp521r1;
-
-    add_header Strict-Transport-Security max-age=31536000;
-
-    auth_basic "Webmail - Connexion";
-    auth_basic_user_file ${PASSWDPATH};
-
-    location ^~ /data {
-        deny all;
-    }
-
-    location / {
-        try_files \$uri \$uri/ index.php;
-    }
-
-    location ~* \.php$ {
-        include       /etc/nginx/fastcgi_params;
-        fastcgi_pass  unix:/var/run/php5-fpm.sock;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-    }
-}
+if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
+	cat > /etc/nginx/sites-enabled/rainloop.conf <<EOF
+	server {
+	    listen 	    ${PORT};
+	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
+	    return 301 	    https://\$server_name\$request_uri; # enforce https
+	}
+	
+	server {
+	    listen          443 ssl;
+	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
+	    root            /var/www/rainloop;
+	    index           index.php;
+	    charset         utf-8;
+	
+	    ## SSL settings
+	    ssl_certificate           /etc/nginx/ssl/server.crt;
+	    ssl_certificate_key       /etc/nginx/ssl/server.key;
+	    ssl_protocols             TLSv1.2;
+	    ssl_ciphers               "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
+	    ssl_prefer_server_ciphers on;
+	    ssl_session_cache         shared:SSL:10m;
+	    ssl_session_timeout       10m;
+	    ssl_ecdh_curve            secp521r1;
+	
+	    add_header Strict-Transport-Security max-age=31536000;
+	
+	    auth_basic "Webmail - Connexion";
+	    auth_basic_user_file ${PASSWDPATH};
+	
+	    location ^~ /data {
+	        deny all;
+	    }
+	
+	    location / {
+	        try_files \$uri \$uri/ index.php;
+	    }
+	
+	    location ~* \.php$ {
+	        include       /etc/nginx/fastcgi_params;
+	        fastcgi_pass  unix:/var/run/php5-fpm.sock;
+	        fastcgi_index index.php;
+	        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+	    }
+	}
 EOF
+else
+	cat > /etc/nginx/sites-enabled/rainloop.conf <<EOF
+	server {
+	    listen 	    ${PORT};
+    	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
+		
+	    root            /var/www/rainloop;
+	    index           index.php;
+	    charset         utf-8;
+	
+	    add_header Strict-Transport-Security max-age=31536000;
+	
+	    auth_basic "Webmail - Connexion";
+	    auth_basic_user_file ${PASSWDPATH};
+	
+	    location ^~ /data {
+	        deny all;
+	    }
+	
+	    location / {
+	        try_files \$uri \$uri/ index.php;
+	    }
+	
+	    location ~* \.php$ {
+	        include       /etc/nginx/fastcgi_params;
+	        fastcgi_pass  unix:/var/run/php5-fpm.sock;
+	        fastcgi_index index.php;
+	        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+	    }
+	}
+EOF
+fi
 
 echo -e "${CGREEN}-> Redémarrage de PHP-FPM.${CEND}"
 service php5-fpm restart
@@ -1079,7 +1150,11 @@ echo ""
 echo -e "${CBROWN}Il ne vous reste plus qu'à configurer Rainloop en ajoutant votre domaine.${CEND}"
 echo -e "${CBROWN}Vous pouvez accéder à l'interface d'administration via cette URL :${CEND}"
 echo ""
-echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}/?admin${CEND}"
+if [[ "$PORT" = "80" ]]; then
+	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}/?admin${CEND}"
+else
+	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}:${PORT}/?admin${CEND}"
+fi
 echo ""
 echo -e "${CBROWN}Par défaut les identifiants sont :${CEND} ${CGREEN}admin${CEND} et ${CGREEN}12345${CEND}"
 echo -e "${CBROWN}Allez voir le tutoriel pour savoir comment rajouter un domaine à Rainloop :${CEND}"
@@ -1089,7 +1164,11 @@ echo ""
 echo -e "${CBROWN}Une fois que Rainloop sera correctement configuré, vous pourrez accéder${CEND}"
 echo -e "à votre boîte mail via cette URL :${CEND}"
 echo ""
-echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}/${CEND}"
+if [[ "$PORT" = "80" ]]; then
+	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}/{CEND}"
+else
+	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}:${PORT}/{CEND}"
+fi
 echo -e "${CBROWN}---------------------------------------------------------------------------${CEND}"
 echo ""
 

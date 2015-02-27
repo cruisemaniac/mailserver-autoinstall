@@ -206,6 +206,7 @@ echo ""
 
 # Si on a redirigé le port 80 vers un autre port, cela peut vouloir dire que le 443 n'est pas non plus accessible, NAT, VM, ...
 # On demande si on veut faire du HTTPS 
+SSL_OK="o"
 read -p "Souhaitez-vous utiliser le SSL (https - port 443) pour les interfaces web ? [o]/n : " SSL_OK
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	mkdir -p /etc/nginx/ssl

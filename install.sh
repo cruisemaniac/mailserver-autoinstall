@@ -567,8 +567,15 @@ smtpd_client_restrictions =
 # reject_unauth_pipelining
 
 smtpd_sender_restrictions =
+     permit_mynetworks,
      reject_non_fqdn_sender,
      reject_unknown_sender_domain
+     
+smtpd_relay_restrictions =
+     permit_mynetworks,
+     reject_unknown_sender_domain,
+     permit_sasl_authenticated,
+     reject_unauth_destination
 
 smtpd_tls_security_level = may
 
@@ -593,6 +600,7 @@ virtual_transport       = lmtp:unix:private/dovecot-lmtp
 virtual_mailbox_domains = mysql:/etc/postfix/mysql-virtual-mailbox-domains.cf
 virtual_mailbox_maps    = mysql:/etc/postfix/mysql-virtual-mailbox-maps.cf
 virtual_alias_maps      = mysql:/etc/postfix/mysql-virtual-alias-maps.cf
+relay_domains 		= mysql:/etc/postfix/mysql-relay-domains.cf
 
 myhostname = ${FQDN}
 alias_maps = hash:/etc/aliases
@@ -641,6 +649,17 @@ password = ${PFPASSWD}
 dbname = postfix
 
 query = SELECT goto FROM alias WHERE address='%s' AND active = 1
+EOF
+
+echo -e "${CGREEN}-> Création du fichier mysql-relay-domains.cf ${CEND}"
+
+cat > /etc/postfix/mysql-relay-domains.cf <<EOF
+hosts = 127.0.0.1
+user = postfix
+password = Cn33828f46FFJYrivUgy
+dbname = postfix
+
+query = SELECT domain FROM domain WHERE domain='%s' and backupmx = 1
 EOF
 
 smallLoader

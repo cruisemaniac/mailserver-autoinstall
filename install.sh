@@ -656,7 +656,7 @@ echo -e "${CGREEN}-> Création du fichier mysql-relay-domains.cf ${CEND}"
 cat > /etc/postfix/mysql-relay-domains.cf <<EOF
 hosts = 127.0.0.1
 user = postfix
-password = Cn33828f46FFJYrivUgy
+password = ${PFPASSWD}
 dbname = postfix
 
 query = SELECT domain FROM domain WHERE domain='%s' and backupmx = 1

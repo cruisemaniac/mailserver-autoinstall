@@ -64,10 +64,10 @@ smallLoader() {
 }
 
 checkBin() {
-    echo -e "${CRED}/!\ ERREUR: Le programme '$1' est requis pour cette installation.${CEND}"
+    echo -e "${CRED}/!\ ERREUR: '$1' est requis pour cette installation.${CEND}"
 }
 
-# Vérification des exécutables
+# Vérification des pré-requis
 command -v dpkg > /dev/null 2>&1 || { echo `checkBin dpkg`    >&2; exit 1; }
 command -v apt-get > /dev/null 2>&1 || { echo `checkBin apt-get` >&2; exit 1; }
 command -v mysql > /dev/null 2>&1 || { echo `checkBin mysql` >&2; exit 1; }
@@ -77,8 +77,9 @@ command -v tar > /dev/null 2>&1 || { echo `checkBin tar` >&2; exit 1; }
 command -v openssl > /dev/null 2>&1 || { echo `checkBin openssl` >&2; exit 1; }
 command -v unzip > /dev/null 2>&1 || { echo `checkBin unzip` >&2; exit 1; }
 command -v strings > /dev/null 2>&1 || { echo `checkBin binutils` >&2; exit 1; }
-command -v nginx > /dev/null 2>&1 || { echo `checkBin nginx/LEMP` >&2; exit 1; }
+command -v nginx > /dev/null 2>&1 || { echo `checkBin nginx` >&2; exit 1; }
 command -v git > /dev/null 2>&1 || { echo `checkBin git-core` >&2; exit 1; }
+command -v curl > /dev/null 2>&1 || { echo `checkBin curl` >&2; exit 1; }
 
 # ##########################################################################
 
@@ -133,13 +134,13 @@ echo ""
 DOMAIN=$(hostname -d 2> /dev/null)   # domain.tld
 HOSTNAME=$(hostname -s 2> /dev/null) # hostname
 FQDN=$(hostname -f 2> /dev/null)     # hostname.domain.tld
-let PORT=80			     # port du serveur web en écoute
+let PORT=80 # port du serveur web en écoute
 
 # Récupération de l'adresse IP WAN
 WANIP=$(dig +short myip.opendns.com @resolver1.opendns.com)
 
-if [ "$IP" = "" ]; then
-    WANIP=$(wget -qO- ipv4.icanhazip.com)
+if [ -z "${WANIP// }" ]; then
+    WANIP=$(curl -s icanhazip.com)
 fi
 
 echo -e "${CCYAN}    Configuration du FQDN (Fully qualified domain name) du serveur     ${CEND}"
@@ -206,8 +207,14 @@ echo ""
 
 # Si on a redirigé le port 80 vers un autre port, cela peut vouloir dire que le 443 n'est pas non plus accessible, NAT, VM, ...
 # On demande si on veut faire du HTTPS
-SSL_OK="o"
+
 read -p "Souhaitez-vous utiliser SSL/TLS (HTTPS - port 443) pour les interfaces web ? [O]/n : " SSL_OK
+
+# Valeur par défaut
+if [ -z "${SSL_OK// }" ]; then
+    SSL_OK="O"
+fi
+
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	mkdir -p /etc/nginx/ssl
 	openssl req -new -x509 -days 3658 -nodes -newkey rsa:2048 -out /etc/nginx/ssl/server.crt -keyout /etc/nginx/ssl/server.key<<EOF
@@ -311,7 +318,6 @@ echo ""
 echo -e "${CGREEN}-> Téléchargement de PostfixAdmin ${CEND}"
 echo ""
 
-
 if [ ! -d /var/www ]; then
     mkdir -p /var/www
     chown -R www-data:www-data /var/www
@@ -364,11 +370,11 @@ read -p "> Chemin du fichier PASSWD [Par défaut : /etc/nginx/passwd] : " PASSWD
 echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
 echo ""
 
-if [ "$PFADOMAIN" = "" ]; then
+if [ -z "${PFADOMAIN// }" ]; then
     PFADOMAIN="postfixadmin"
 fi
 
-if [ "$PASSWDPATH" = "" ]; then
+if [ -z "${PASSWDPATH// }" ]; then
     PASSWDPATH="/etc/nginx/passwd"
 fi
 
@@ -1035,7 +1041,7 @@ read -p "> Sous-domaine de Rainloop [Par défaut : webmail] : " RAINLOOPDOMAIN
 echo -e "${CCYAN}-------------------------------------------------${CEND}"
 echo ""
 
-if [ "$RAINLOOPDOMAIN" = "" ]; then
+if [ -z "${RAINLOOPDOMAIN// }" ]; then
     RAINLOOPDOMAIN="webmail"
 fi
 

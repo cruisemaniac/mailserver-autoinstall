@@ -106,14 +106,6 @@ echo -n "> /etc/dovecot"
 rm -rf /etc/dovecot
 echo -e " ${CGREEN}[OK]${CEND}"
 
-echo -n "> /etc/ssl/certs/dovecot.pem"
-rm -rf /etc/ssl/certs/dovecot.pem
-echo -e " ${CGREEN}[OK]${CEND}"
-
-echo -n "> /etc/ssl/private/dovecot.pem"
-rm -rf /etc/ssl/private/dovecot.pem
-echo -e " ${CGREEN}[OK]${CEND}"
-
 echo -n "> /etc/opendkim.conf"
 rm -rf /etc/opendkim.conf
 echo -e " ${CGREEN}[OK]${CEND}"
@@ -140,6 +132,17 @@ echo -e " ${CGREEN}[OK]${CEND}"
 
 echo -n "> /etc/nginx/sites-enabled/rainloop.conf"
 rm -rf /etc/nginx/sites-enabled/rainloop.conf
+echo -e " ${CGREEN}[OK]${CEND}"
+
+echo -n "> Suppression des certificats SSL"
+rm -rf /etc/ssl/certs/mailserver_ca.crt
+rm -rf /etc/ssl/certs/mailserver_postfix.crt
+rm -rf /etc/ssl/certs/mailserver_dovecot.crt
+rm -rf /etc/ssl/certs/mailserver_nginx.crt
+rm -rf /etc/ssl/private/mailserver_ca.key
+rm -rf /etc/ssl/private/mailserver_postfix.key
+rm -rf /etc/ssl/private/mailserver_dovecot.key
+rm -rf /etc/ssl/private/mailserver_nginx.key
 echo -e " ${CGREEN}[OK]${CEND}"
 
 echo ""

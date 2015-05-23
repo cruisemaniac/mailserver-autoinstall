@@ -223,7 +223,7 @@ IT
 admin@${DOMAIN}
 EOF
 
-echo -e "\n${CGREEN}-> Création du certificat de Postfix${CEND}"
+echo -e "\n\n${CGREEN}-> Création du certificat de Postfix${CEND}"
 openssl genrsa -out mailserver_postfix.key 4096
 openssl req -new -key mailserver_postfix.key -out mailserver_postfix.csr<<EOF
 FR
@@ -237,7 +237,7 @@ admin@${DOMAIN}
 
 EOF
 
-echo -e "\n${CGREEN}-> Création du certificat de Dovecot${CEND}"
+echo -e "\n\n${CGREEN}-> Création du certificat de Dovecot${CEND}"
 openssl genrsa -out mailserver_dovecot.key 4096
 openssl req -new -key mailserver_dovecot.key -out mailserver_dovecot.csr<<EOF
 FR
@@ -251,11 +251,11 @@ admin@${DOMAIN}
 
 EOF
 
-echo -e "${CGREEN}-> Signature des certificats${CEND}"
+echo -e "\n\n${CGREEN}-> Signature des certificats${CEND}"
 openssl x509 -req -days 3658 -in mailserver_postfix.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_postfix.crt
 openssl x509 -req -days 3658 -in mailserver_dovecot.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_dovecot.crt
 
-echo -e "${CGREEN}-> Modification des permissions${CEND}"
+echo -e "\n${CGREEN}-> Modification des permissions${CEND}"
 chmod 400 mailserver_ca.key
 chmod 444 mailserver_ca.crt
 chmod 400 mailserver_postfix.key
@@ -274,7 +274,7 @@ fi
 
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 
-    echo -e "${CGREEN}-> Création du certificat de Nginx${CEND}"
+    echo -e "\n${CGREEN}-> Création du certificat de Nginx${CEND}"
     openssl genrsa -out mailserver_nginx.key 4096
     openssl req -new -key mailserver_nginx.key -out mailserver_nginx.csr<<EOF
 FR
@@ -297,7 +297,7 @@ EOF
     mv mailserver_nginx.crt certs/
 fi
 
-echo -e "${CGREEN}-> Déplacement des certificats dans /etc/ssl/certs et /etc/ssl/private${CEND}"
+echo -e "\n${CGREEN}-> Déplacement des certificats dans /etc/ssl/certs et /etc/ssl/private${CEND}"
 mv mailserver_ca.key      private/
 mv mailserver_postfix.key private/
 mv mailserver_dovecot.key private/
@@ -634,7 +634,7 @@ sed -i -e "0,/#\(.*smtp\([^s]\).*inet.*n.*smtpd.*\)/s/#\(.*smtp\([^s]\).*inet.*n
        -e "s/#\(.*smtpd_tls_security_level=encrypt\)/\1/" \
        -e "0,/#\(.*smtpd_sasl_auth_enable=yes\)/s/#\(.*smtpd_sasl_auth_enable=yes\)/\1/" /etc/postfix/master.cf
 
-sed -i '/\(.*syslog_name=postfix\/submission\)/a -o smtpd_tls_dh1024_param_file=${config_directory}/dh2048.pem' /etc/postfix/master.cf
+sed -i '/\(.*syslog_name=postfix\/submission\)/a \ \ -o smtpd_tls_dh1024_param_file=${config_directory}/dh2048.pem' /etc/postfix/master.cf
 
 echo -e "${CGREEN}-> Génération des paramètres Diffie–Hellman${CEND}"
 echo -e "${CRED}\n/!\ INFO: Merci d'être patient, cette étape peut prendre plusieurs dizaines de minutes sur certains serveurs.${CEND}" 1>&2
@@ -1250,40 +1250,43 @@ echo -e "${CCYAN}[  REDÉMARRAGE DES SERVICES  ]${CEND}"
 echo -e "${CCYAN}------------------------------${CEND}"
 echo ""
 
-echo -n "-> Redémarrage de Postfix."
+echo -n "-> Redémarrage de Postfix.\n"
 service postfix restart
 
 if [ $? -ne 0 ]; then
     echo ""
-    echo -e "\n ${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Postfix.${CEND}" 1>&2
-    echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}" 1>&2
+    echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Postfix.${CEND}" 1>&2
+    echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}\n\n" 1>&2
     echo -e "${CRED}POSTFIX: `service postfix status` !${CEND}"  1>&2
     echo ""
+    exit 1
 fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-echo -n "-> Redémarrage de Dovecot."
+echo -n "-> Redémarrage de Dovecot.\n"
 service dovecot restart
 
 if [ $? -ne 0 ]; then
     echo ""
-    echo -e "\n ${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Dovecot.${CEND}" 1>&2
-    echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}" 1>&2
+    echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Dovecot.${CEND}" 1>&2
+    echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}\n\n" 1>&2
     echo -e "${CRED}DOVECOT: `service dovecot status` !${CEND}"  1>&2
     echo ""
+    exit 1
 fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-echo -n "-> Redémarrage d'OpenDKIM."
+echo -n "-> Redémarrage d'OpenDKIM.\n"
 service opendkim restart
 
 if [ $? -ne 0 ]; then
     echo ""
-    echo -e "\n ${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDKIM.${CEND}" 1>&2
+    echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDKIM.${CEND}\n\n" 1>&2
     echo -e "${CRED}OPENDKIM: `service opendkim status` !${CEND}"  1>&2
     echo ""
+    exit 1
 fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
@@ -1298,7 +1301,6 @@ NBPORT=$(netstat -ptna | grep '0.0.0.0:25\|0.0.0.0:587\|0.0.0.0:993\|127.0.0.1:1
 
 # Vérification des ports
 if [ $NBPORT -ne 4 ]; then
-    echo ""
     echo -e "${CRED}/!\ ERREUR: Nombre de ports invalide ! Un service n'a pas démarré correctement.${CEND}" 1>&2
     echo ""
     exit 1

@@ -134,6 +134,7 @@ echo ""
 DOMAIN=$(hostname -d 2> /dev/null)   # domain.tld
 HOSTNAME=$(hostname -s 2> /dev/null) # hostname
 FQDN=$(hostname -f 2> /dev/null)     # hostname.domain.tld
+PORT=80
 
 # Récupération de l'adresse IP WAN
 WANIP=$(dig +short myip.opendns.com @resolver1.opendns.com)
@@ -222,7 +223,7 @@ IT
 admin@${DOMAIN}
 EOF
 
-echo -e "${CGREEN}-> Création du certificat de Postfix${CEND}"
+echo -e "\n${CGREEN}-> Création du certificat de Postfix${CEND}"
 openssl genrsa -out mailserver_postfix.key 4096
 openssl req -new -key mailserver_postfix.key -out mailserver_postfix.csr<<EOF
 FR
@@ -232,9 +233,11 @@ Postfix certificate
 Mail
 *.${DOMAIN}
 admin@${DOMAIN}
+
+
 EOF
 
-echo -e "${CGREEN}-> Création du certificat de Dovecot${CEND}"
+echo -e "\n${CGREEN}-> Création du certificat de Dovecot${CEND}"
 openssl genrsa -out mailserver_dovecot.key 4096
 openssl req -new -key mailserver_dovecot.key -out mailserver_dovecot.csr<<EOF
 FR
@@ -244,6 +247,8 @@ Dovecot certificate
 Mail
 *.${DOMAIN}
 admin@${DOMAIN}
+
+
 EOF
 
 echo -e "${CGREEN}-> Signature des certificats${CEND}"
@@ -279,6 +284,8 @@ Nginx certificate
 Web
 *.${DOMAIN}
 admin@${DOMAIN}
+
+
 EOF
 
     openssl x509 -req -days 3658 -in mailserver_nginx.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_nginx.crt

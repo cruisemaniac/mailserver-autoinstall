@@ -372,7 +372,7 @@ if [ "$PASSWDPATH" = "" ]; then
     PASSWDPATH="/etc/nginx/passwd"
 fi
 
-if [ $(cat $PASSWDPATH) == '' ] || [ ! -f "$PASSWDPATH" ]; then
+if [[ $(cat $PASSWDPATH) = '' ]] || [[ ! -f "$PASSWDPATH" ]]; then
     USERAUTH="Admin"
     PASSWDAUTH="1234"
     echo -e "${CCYAN}-----------------------------------------------------------${CEND}"

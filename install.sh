@@ -265,6 +265,7 @@ chmod 444 mailserver_dovecot.crt
 
 # Si on a redirigé le port 80 vers un autre port, cela peut vouloir dire que le 443 n'est pas non plus accessible, NAT, VM, ...
 # On demande si on veut faire du HTTPS
+echo ""
 read -p "Souhaitez-vous utiliser SSL/TLS (HTTPS - port 443) pour les interfaces web ? [O]/n : " SSL_OK
 
 # Valeur par défaut
@@ -460,7 +461,7 @@ if [ -z "${PASSWDPATH// }" ]; then
     PASSWDPATH="/etc/nginx/passwd"
 fi
 
-if [[ ! -s "$PASSWDPATH" ]] || [[ ! -f "$PASSWDPATH" ]]; then
+if [[ ! -s "$PASSWDPATH" ]] || [[ ! -f "$PASSWDPATH" ]]; then
 
     USERAUTH="admin"
     PASSWDAUTH="1234"
@@ -1250,7 +1251,8 @@ echo -e "${CCYAN}[  REDÉMARRAGE DES SERVICES  ]${CEND}"
 echo -e "${CCYAN}------------------------------${CEND}"
 echo ""
 
-echo -n "-> Redémarrage de Postfix.\n"
+echo -n "-> Redémarrage de Postfix."
+echo ""
 service postfix restart
 
 if [ $? -ne 0 ]; then
@@ -1264,7 +1266,8 @@ fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-echo -n "-> Redémarrage de Dovecot.\n"
+echo -n "-> Redémarrage de Dovecot."
+echo ""
 service dovecot restart
 
 if [ $? -ne 0 ]; then
@@ -1278,7 +1281,8 @@ fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-echo -n "-> Redémarrage d'OpenDKIM.\n"
+echo -n "-> Redémarrage d'OpenDKIM."
+echo ""
 service opendkim restart
 
 if [ $? -ne 0 ]; then
@@ -1312,7 +1316,6 @@ echo ""
 echo -e "${CGREEN}-----------------------------------------${CEND}"
 echo -e "${CGREEN}[  INSTALLATION EFFECTUÉE AVEC SUCCÈS ! ]${CEND}"
 echo -e "${CGREEN}-----------------------------------------${CEND}"
-echo ""
 
 smallLoader
 clear

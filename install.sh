@@ -134,7 +134,6 @@ echo ""
 DOMAIN=$(hostname -d 2> /dev/null)   # domain.tld
 HOSTNAME=$(hostname -s 2> /dev/null) # hostname
 FQDN=$(hostname -f 2> /dev/null)     # hostname.domain.tld
-let PORT=80 # port du serveur web en écoute
 
 # Récupération de l'adresse IP WAN
 WANIP=$(dig +short myip.opendns.com @resolver1.opendns.com)
@@ -157,14 +156,18 @@ echo ""
 echo -e "${CCYAN}-----------------------------------------------------------------------${CEND}"
 echo ""
 
-read -p "Souhaitez-vous les modifier ? o /[N] : " REPFQDN
+read -p "Souhaitez-vous les modifier ? o/[N] : " REPFQDN
 
 if [[ "$REPFQDN" = "O" ]] || [[ "$REPFQDN" = "o" ]]; then
 
 echo ""
 read -p "> Veuillez saisir le nom d'hôte : " HOSTNAME
 read -p "> Veuillez saisir le nom de domaine (format: domain.tld) : " DOMAIN
-read -p "> Veuillez saisir le port du serveur web en écoute : " PORT
+read -p "> Veuillez saisir le port du serveur web en écoute [Par défaut: 80] : " PORT
+
+if [ -z "${PORT// }" ]; then
+    PORT=80
+fi
 
 FQDN="${HOSTNAME}.${DOMAIN}"
 
@@ -200,14 +203,63 @@ fi
 # ##########################################################################
 
 echo ""
-echo -e "${CCYAN}-----------------------------${CEND}"
-echo -e "${CCYAN}[  SSL Configuration - Cert ]${CEND}"
-echo -e "${CCYAN}-----------------------------${CEND}"
+echo -e "${CCYAN}--------------------------------${CEND}"
+echo -e "${CCYAN}[ Création des certificats SSL ]${CEND}"
+echo -e "${CCYAN}--------------------------------${CEND}"
 echo ""
+
+cd /etc/ssl/
+
+echo -e "${CGREEN}-> Création de l'autorité de certification${CEND}"
+openssl genrsa -out mailserver_ca.key 4096
+openssl req -x509 -new -nodes -days 3658 -key mailserver_ca.key -out mailserver_ca.crt<<EOF
+FR
+France
+Paris
+${DOMAIN} Certificate authority
+IT
+*.${DOMAIN}
+admin@${DOMAIN}
+EOF
+
+echo -e "${CGREEN}-> Création du certificat de Postfix${CEND}"
+openssl genrsa -out mailserver_postfix.key 4096
+openssl req -new -key mailserver_postfix.key -out mailserver_postfix.csr<<EOF
+FR
+France
+Paris
+Postfix certificate
+Mail
+*.${DOMAIN}
+admin@${DOMAIN}
+EOF
+
+echo -e "${CGREEN}-> Création du certificat de Dovecot${CEND}"
+openssl genrsa -out mailserver_dovecot.key 4096
+openssl req -new -key mailserver_dovecot.key -out mailserver_dovecot.csr<<EOF
+FR
+France
+Paris
+Dovecot certificate
+Mail
+*.${DOMAIN}
+admin@${DOMAIN}
+EOF
+
+echo -e "${CGREEN}-> Signature des certificats${CEND}"
+openssl x509 -req -days 3658 -in mailserver_postfix.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_postfix.crt
+openssl x509 -req -days 3658 -in mailserver_dovecot.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_dovecot.crt
+
+echo -e "${CGREEN}-> Modification des permissions${CEND}"
+chmod 400 mailserver_ca.key
+chmod 444 mailserver_ca.crt
+chmod 400 mailserver_postfix.key
+chmod 444 mailserver_postfix.crt
+chmod 400 mailserver_dovecot.key
+chmod 444 mailserver_dovecot.crt
 
 # Si on a redirigé le port 80 vers un autre port, cela peut vouloir dire que le 443 n'est pas non plus accessible, NAT, VM, ...
 # On demande si on veut faire du HTTPS
-
 read -p "Souhaitez-vous utiliser SSL/TLS (HTTPS - port 443) pour les interfaces web ? [O]/n : " SSL_OK
 
 # Valeur par défaut
@@ -216,17 +268,35 @@ if [ -z "${SSL_OK// }" ]; then
 fi
 
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
-	mkdir -p /etc/nginx/ssl
-	openssl req -new -x509 -days 3658 -nodes -newkey rsa:2048 -out /etc/nginx/ssl/server.crt -keyout /etc/nginx/ssl/server.key<<EOF
+
+    echo -e "${CGREEN}-> Création du certificat de Nginx${CEND}"
+    openssl genrsa -out mailserver_nginx.key 4096
+    openssl req -new -key mailserver_nginx.key -out mailserver_nginx.csr<<EOF
 FR
-
-
-
-
-${DOMAIN}
-contact@${DOMAIN}
+France
+Paris
+Nginx certificate
+Web
+*.${DOMAIN}
+admin@${DOMAIN}
 EOF
+
+    openssl x509 -req -days 3658 -in mailserver_nginx.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_nginx.crt
+
+    chmod 400 mailserver_nginx.key
+    chmod 444 mailserver_nginx.crt
+
+    mv mailserver_nginx.key private/
+    mv mailserver_nginx.crt certs/
 fi
+
+echo -e "${CGREEN}-> Déplacement des certificats dans /etc/ssl/certs et /etc/ssl/private${CEND}"
+mv mailserver_ca.key      private/
+mv mailserver_postfix.key private/
+mv mailserver_dovecot.key private/
+mv mailserver_ca.crt      certs/
+mv mailserver_postfix.crt certs/
+mv mailserver_dovecot.crt certs/
 
 smallLoader
 clear
@@ -240,7 +310,8 @@ echo ""
 echo -e "${CGREEN}-> Installation de postfix, postfix-mysql et PHP-IMAP ${CEND}"
 echo ""
 
-apt-get install -y postfix postfix-mysql php5-imap php5-curl   # php5-curl pour rainloop
+# php5-imap pour Postfixadmin & php5-curl pour rainloop
+apt-get install -y postfix postfix-mysql php5-imap php5-curl
 
 if [ $? -ne 0 ]; then
     echo ""
@@ -263,8 +334,6 @@ read -sp "> Veuillez saisir le mot de passe de l'utilisateur root de MySQL : " M
 echo ""
 echo -e "${CGREEN}------------------------------------------------------------------${CEND}"
 echo ""
-
-# mysqladmin: CREATE DATABASE failed; error: 'Can't create database 'postfix'; database exists'
 
 echo -e "${CGREEN}-> Création de la base de donnée Postfix ${CEND}"
 until mysqladmin -uroot -p$MYSQLPASSWD create postfix &> /tmp/mysql-resp.tmp
@@ -336,7 +405,13 @@ do
     echo -e ""
 done
 
-# TODO: Vérifier que c'est bien une archive TAR.GZ
+# On vérifie la présence de l'archive
+if [ ! -f postfixadmin-$POSTFIXADMIN_VER.tar.gz ]; then
+    echo ""
+    echo -e "\n ${CRED}/!\ FATAL: L'archive de Postfixadmin est introuvable.${CEND}" 1>&2
+    echo ""
+    exit 1
+fi
 
 echo -e "${CGREEN}-> Décompression du PostfixAdmin ${CEND}"
 tar -xzf postfixadmin-$POSTFIXADMIN_VER.tar.gz
@@ -384,7 +459,7 @@ if [[ ! -s "$PASSWDPATH" ]] || [[ ! -f "$PASSWDPATH" ]]; then
     PASSWDAUTH="1234"
 
     echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
-    echo -e "${CCYAN}Votre fichier ${PASSWDPATH} est vide ou n'existe pas.${CEND}"
+    echo -e "${CCYAN}Le fichier ${PASSWDPATH} est vide ou n'existe pas.${CEND}"
     echo -e "${CCYAN}Veuillez entrer les informations suivantes :${CEND}"
     read -p "> Nom d'utilisateur [Par défaut : Admin] : " USERAUTH
     read -sp "> Mot de passe [Par défaut : 1234] : " PASSWDAUTH
@@ -398,75 +473,76 @@ fi
 
 echo -e "${CGREEN}-> Ajout du vhost postfixadmin ${CEND}"
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
-	cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF
-	server {
-	  listen          ${PORT};
-	  server_name     ${PFADOMAIN}.${DOMAIN};
-	  return 301      https://\$server_name\$request_uri; # enforce https
-	}
+cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF
+server {
+    listen          ${PORT};
+    server_name     ${PFADOMAIN}.${DOMAIN};
+    return 301      https://\$server_name\$request_uri; # enforce https
+}
 
-	server {
-	    listen          443 ssl;
-	    server_name     ${PFADOMAIN}.${DOMAIN};
-	    root            /var/www/postfixadmin;
-	    index           index.php;
-	    charset         utf-8;
+server {
+    listen          443 ssl;
+    server_name     ${PFADOMAIN}.${DOMAIN};
+    root            /var/www/postfixadmin;
+    index           index.php;
+    charset         utf-8;
 
-	    ## SSL settings
-	    ssl_certificate           /etc/nginx/ssl/server.crt;
-	    ssl_certificate_key       /etc/nginx/ssl/server.key;
-	    ssl_protocols             TLSv1.2;
-	    ssl_ciphers               "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
-	    ssl_prefer_server_ciphers on;
-	    ssl_session_cache         shared:SSL:10m;
-	    ssl_session_timeout       10m;
-	    ssl_ecdh_curve            secp521r1;
+    ## SSL settings
+    ssl_certificate           /etc/ssl/certs/mailserver_nginx.crt;
+    ssl_certificate_key       /etc/ssl/private/mailserver_nginx.key;
+    ssl_protocols             TLSv1.2;
+    ssl_ciphers               "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       10m;
+    ssl_ecdh_curve            secp521r1;
 
-	    add_header Strict-Transport-Security max-age=31536000;
+    add_header Strict-Transport-Security max-age=31536000;
 
-	    auth_basic "PostfixAdmin - Connexion";
-	    auth_basic_user_file ${PASSWDPATH};
+    auth_basic "PostfixAdmin - Connexion";
+    auth_basic_user_file ${PASSWDPATH};
 
-	    location / {
-	        try_files \$uri \$uri/ index.php;
-	    }
+    location / {
+        try_files \$uri \$uri/ index.php;
+    }
 
-	    location ~* \.php$ {
-	        include       /etc/nginx/fastcgi_params;
-	        fastcgi_pass  unix:/var/run/php5-fpm.sock;
-	        fastcgi_index index.php;
-	        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-	    }
-	}
+    location ~* \.php$ {
+        include       /etc/nginx/fastcgi_params;
+        fastcgi_pass  unix:/var/run/php5-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+    }
+}
 EOF
 else
-	cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF
-	server {
-	  listen          ${PORT};
-	  server_name     ${PFADOMAIN}.${DOMAIN};
-	  root            /var/www/postfixadmin;
-	  index           index.php;
-	  charset         utf-8;
+cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF
+server {
+    listen          ${PORT};
+    server_name     ${PFADOMAIN}.${DOMAIN};
+    root            /var/www/postfixadmin;
+    index           index.php;
+    charset         utf-8;
 
-	  auth_basic "PostfixAdmin - Connexion";
-	  auth_basic_user_file ${PASSWDPATH};
+    auth_basic "PostfixAdmin - Connexion";
+    auth_basic_user_file ${PASSWDPATH};
 
-	  location / {
-	      try_files \$uri \$uri/ index.php;
-	  }
+    location / {
+        try_files \$uri \$uri/ index.php;
+    }
 
-	  location ~* \.php$ {
-	      include       /etc/nginx/fastcgi_params;
-	      fastcgi_pass  unix:/var/run/php5-fpm.sock;
-	      fastcgi_index index.php;
-	      fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-	  }
-	}
+    location ~* \.php$ {
+        include       /etc/nginx/fastcgi_params;
+        fastcgi_pass  unix:/var/run/php5-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+    }
+}
 EOF
 fi
 
 echo -e "${CGREEN}-> Redémarrage de PHP-FPM.${CEND}"
 service php5-fpm restart
+
 echo -e "${CGREEN}-> Redémarrage de nginx pour prendre en compte le nouveau vhost.${CEND}"
 service nginx restart
 
@@ -544,44 +620,160 @@ echo -e "${CCYAN}[  CONFIGURATION DE POSTFIX  ]${CEND}"
 echo -e "${CCYAN}------------------------------${CEND}"
 echo ""
 
-echo -e "${CGREEN}-> Mise en place du fichier /etc/postfix/master.cf ${CEND}"
+echo -e "${CGREEN}-> Mise en place du fichier /etc/postfix/master.cf${CEND}"
 sed -i -e "0,/#\(.*smtp\([^s]\).*inet.*n.*smtpd.*\)/s/#\(.*smtp\([^s]\).*inet.*n.*smtpd.*\)/\1/" \
        -e "s/#\(.*submission.*inet.*n.*\)/\1/" \
        -e "s/#\(.*syslog_name=postfix\/submission\)/\1/" \
        -e "s/#\(.*smtpd_tls_security_level=encrypt\)/\1/" \
-       -e "0,/#\(.*smtpd_sasl_auth_enable=yes\)/s/#\(.*smtpd_sasl_auth_enable=yes\)/\1/" \
-       -e "0,/#\(.*smtpd_client_restrictions=.*\)/s/#\(.*smtpd_client_restrictions=.*\)/\1/" /etc/postfix/master.cf
+       -e "0,/#\(.*smtpd_sasl_auth_enable=yes\)/s/#\(.*smtpd_sasl_auth_enable=yes\)/\1/" /etc/postfix/master.cf
+
+sed -i '/\(.*syslog_name=postfix\/submission\)/a -o smtpd_tls_dh1024_param_file=${config_directory}/dh2048.pem' /etc/postfix/master.cf
+
+echo -e "${CGREEN}-> Génération des paramètres Diffie–Hellman${CEND}"
+echo -e "${CRED}\n/!\ INFO: Merci d'être patient, cette étape peut prendre plusieurs dizaines de minutes sur certains serveurs.${CEND}" 1>&2
+echo ""
+openssl dhparam -out /etc/postfix/dh2048.pem 2048
+openssl dhparam -out /etc/postfix/dh512.pem 512
 
 echo -e "${CGREEN}-> Mise en place du fichier /etc/postfix/main.cf ${CEND}"
 cat > /etc/postfix/main.cf <<EOF
-smtpd_banner = \$myhostname ESMTP \$mail_name (Debian/GNU)
-biff = no
-append_dot_mydomain = no
-readme_directory = no
+#######################
+## GENERALS SETTINGS ##
+#######################
+
+smtpd_banner         = \$myhostname ESMTP \$mail_name (Debian/GNU)
+biff                 = no
+append_dot_mydomain  = no
+readme_directory     = no
+delay_warning_time   = 4h
+mailbox_command      = procmail -a "\$EXTENSION"
+recipient_delimiter  = +
+disable_vrfy_command = yes
+message_size_limit   = 502400000
+mailbox_size_limit   = 1024000000
+
+inet_interfaces = all
+inet_protocols = ipv4
+
+myhostname    = ${FQDN}
+myorigin      = ${FQDN}
+mydestination = localhost localhost.\$mydomain
+mynetworks    = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+
+alias_maps     = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+
+####################
+## TLS PARAMETERS ##
+####################
+
+# SMTP ( OUTGOING )
+# ----------------------------------------------------------------------
+smtp_tls_loglevel               = 1
+smtp_tls_security_level         = may
+smtp_tls_CAfile                 = /etc/ssl/certs/mailserver_ca.crt
+smtp_tls_session_cache_database = btree:\${data_directory}/smtp_scache
+
+# SMTPD ( INCOMING )
+# ----------------------------------------------------------------------
+smtpd_tls_loglevel            = 1
+smtpd_tls_auth_only           = yes
+smtpd_tls_security_level      = may
+smtpd_tls_received_header     = yes
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, TLSv1
+smtpd_tls_mandatory_ciphers   = high
+smtpd_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CDC3-SHA, KRB5-DE5, CBC3-SHA
+
+tls_random_source = dev:/dev/urandom
+
+# TLS PUBLIC CERTIFICATES AND PRIVATE KEY
+smtpd_tls_CAfile    = /etc/ssl/certs/mailserver_ca.crt
+smtpd_tls_cert_file = /etc/ssl/certs/mailserver_postfix.crt
+smtpd_tls_key_file  = /etc/ssl/private/mailserver_postfix.key
+
+# TLS/LMTP SESSION CACHE DATABASES
+smtpd_tls_session_cache_database = btree:\${data_directory}/smtpd_scache
+lmtp_tls_session_cache_database  = btree:\${data_directory}/lmtp_scache
+
+# CYPHERS AND CURVE PARAMETERS
+smtpd_tls_eecdh_grade  = ultra
+tls_eecdh_strong_curve = prime256v1
+tls_eecdh_ultra_curve  = secp384r1
+tls_preempt_cipherlist = yes
+
+# DIFFIE-HELLMAN PARAMETERS
+smtpd_tls_dh1024_param_file = \$config_directory/dh2048.pem
+smtpd_tls_dh512_param_file  = \$config_directory/dh512.pem
+
+# ----------------------------------------------------------------------
+
+#####################
+## SASL PARAMETERS ##
+#####################
+
+smtpd_sasl_auth_enable          = yes
+smtpd_sasl_type                 = dovecot
+smtpd_sasl_path                 = private/auth
+smtpd_sasl_security_options     = noanonymous
+smtpd_sasl_tls_security_options = \$smtpd_sasl_security_options
+smtpd_sasl_local_domain         = \$mydomain
+smtpd_sasl_authenticated_header = yes
+
+broken_sasl_auth_clients = yes
+
+##############################
+## VIRTUALS MAPS PARAMETERS ##
+##############################
+
+virtual_uid_maps        = static:5000
+virtual_gid_maps        = static:5000
+virtual_minimum_uid     = 5000
+virtual_mailbox_base    = /var/mail
+virtual_transport       = lmtp:unix:private/dovecot-lmtp
+virtual_mailbox_domains = mysql:/etc/postfix/mysql-virtual-mailbox-domains.cf
+virtual_mailbox_maps    = mysql:/etc/postfix/mysql-virtual-mailbox-maps.cf
+virtual_alias_maps      = mysql:/etc/postfix/mysql-virtual-alias-maps.cf
+relay_domains           = mysql:/etc/postfix/mysql-relay-domains.cf
+
+######################
+## ERRORS REPORTING ##
+######################
+
+# notify_classes = bounce, delay, resource, software
+notify_classes = resource, software
+
+error_notice_recipient     = admin@domain.tld
+# delay_notice_recipient   = admin@domain.tld
+# bounce_notice_recipient  = admin@domain.tld
+# 2bounce_notice_recipient = admin@domain.tld
+
+##################
+## RESTRICTIONS ##
+##################
 
 smtpd_recipient_restrictions =
      permit_mynetworks,
      permit_sasl_authenticated,
      reject_non_fqdn_recipient,
      reject_unauth_destination,
-     reject_unknown_recipient_domain
+     reject_unknown_recipient_domain,
+     reject_rbl_client zen.spamhaus.org
 
 smtpd_helo_restrictions =
      permit_mynetworks,
      permit_sasl_authenticated,
      reject_invalid_helo_hostname,
-     reject_non_fqdn_helo_hostname,
-     reject_unknown_helo_hostname
+     reject_non_fqdn_helo_hostname
+     # reject_unknown_helo_hostname
 
 smtpd_client_restrictions =
      permit_mynetworks,
      permit_inet_interfaces,
-     permit_sasl_authenticated,
-# reject_plaintext_session,
-# reject_unauth_pipelining
+     permit_sasl_authenticated
+     # reject_plaintext_session,
+     # reject_unauth_pipelining
 
 smtpd_sender_restrictions =
-     permit_mynetworks,
      reject_non_fqdn_sender,
      reject_unknown_sender_domain
 
@@ -590,45 +782,6 @@ smtpd_relay_restrictions =
      reject_unknown_sender_domain,
      permit_sasl_authenticated,
      reject_unauth_destination
-
-smtpd_tls_security_level = may
-
-smtpd_sasl_auth_enable = yes
-smtpd_sasl_type = dovecot
-smtpd_sasl_path = private/auth
-smtpd_sasl_security_options = noanonymous
-smtpd_sasl_tls_security_options = \$smtpd_sasl_security_options
-smtpd_sasl_local_domain = \$mydomain
-smtpd_sasl_authenticated_header = yes
-
-smtpd_tls_auth_only = no
-smtpd_tls_cert_file = /etc/ssl/certs/dovecot.pem
-smtpd_tls_key_file  = /etc/ssl/private/dovecot.pem
-
-broken_sasl_auth_clients = yes
-
-virtual_uid_maps        = static:5000
-virtual_gid_maps        = static:5000
-virtual_mailbox_base    = /var/mail
-virtual_transport       = lmtp:unix:private/dovecot-lmtp
-virtual_mailbox_domains = mysql:/etc/postfix/mysql-virtual-mailbox-domains.cf
-virtual_mailbox_maps    = mysql:/etc/postfix/mysql-virtual-mailbox-maps.cf
-virtual_alias_maps      = mysql:/etc/postfix/mysql-virtual-alias-maps.cf
-relay_domains 		= mysql:/etc/postfix/mysql-relay-domains.cf
-
-myhostname = ${FQDN}
-alias_maps = hash:/etc/aliases
-alias_database = hash:/etc/aliases
-myorigin = /etc/mailname
-mydestination = localhost
-relayhost =
-mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
-mailbox_command = procmail -a "\$EXTENSION"
-mailbox_size_limit = 0
-recipient_delimiter = +
-inet_interfaces = all
-inet_protocols = ipv4
-# smtp_address_preference = ipv4
 EOF
 
 echo ""
@@ -708,113 +861,36 @@ echo -e "${CGREEN}-> Positionnement des droits sur le répertoire /etc/dovecot $
 chown -R vmail:dovecot /etc/dovecot
 chmod -R o-rwx /etc/dovecot
 
-echo -e "${CGREEN}-> Création du certificat SSL et de la clé privée avec mkcert.sh${CEND}"
-cat > /usr/share/dovecot/dovecot-openssl.cnf <<EOF
-#
-# SSLeay configuration file for Dovecot.
-#
-
-RANDFILE                = /dev/urandom
-
-[ req ]
-default_bits            = 4096
-default_keyfile         = dovecot.pem
-distinguished_name      = req_distinguished_name
-prompt                  = no
-policy                  = policy_anything
-req_extensions          = v3_req
-x509_extensions         = v3_req
-
-[ req_distinguished_name ]
-organizationName = Dovecot mail server
-organizationalUnitName = IT
-commonName = ${FQDN}
-emailAddress = admin@${DOMAIN}
-
-[ v3_req ]
-basicConstraints = CA:FALSE
-EOF
-
-cd /usr/share/dovecot/
-sh ./mkcert.sh
-
-mv /etc/dovecot/dovecot.pem /etc/ssl/certs
-mv /etc/dovecot/private/dovecot.pem /etc/ssl/private
-
 echo ""
 echo -e "${CGREEN}-> Mise en place du fichier /etc/dovecot/dovecot.conf ${CEND}"
 cat > /etc/dovecot/dovecot.conf <<EOF
-## Dovecot configuration file
-
-# Enable installed protocols
 !include_try /usr/share/dovecot/protocols.d/*.protocol
 protocols = imap lmtp
-
-# A space separated list of IP or host addresses where to listen in for
-# connections. "*" listens in all IPv4 interfaces. "[::]" listens in all IPv6
-# interfaces. Use "*, [::]" for listening both IPv4 and IPv6.
 listen = *
-
-# Most of the actual configuration gets included below. The filenames are
-# first sorted by their ASCII value and parsed in that order. The 00-prefixes
-# in filenames are intended to make it easier to understand the ordering.
 !include conf.d/*.conf
-
-# A config file can also tried to be included without giving an error if
-# it's not found:
-!include_try local.conf
 EOF
 
 echo -e "${CGREEN}-> Mise en place du fichier /etc/dovecot/conf.d/10-mail.conf ${CEND}"
 cat > /etc/dovecot/conf.d/10-mail.conf <<EOF
-## Mailbox locations and namespaces
+mail_location = maildir:/var/mail/vhosts/%d/%n/mail
 
-# Location for users' mailboxes. The default is empty, which means that Dovecot
-# tries to find the mailboxes automatically. This won't work if the user
-# doesn't yet have any mail, so you should explicitly tell Dovecot the full
-# location
-mail_location = maildir:/var/mail/vhosts/%d/%n
-
-# If you need to set multiple mailbox locations or want to change default
-# namespace settings, you can do it by defining namespace sections.
 namespace inbox {
     inbox = yes
 }
 
-# Group to enable temporarily for privileged operations. Currently this is
-# used only with INBOX when either its initial creation or dotlocking fails.
-# Typically this is set to "mail" to give access to /var/mail.
-mail_privileged_group = mail
+mail_uid = 5000
+mail_gid = 5000
+
+first_valid_uid = 5000
+last_valid_uid = 5000
+
+mail_privileged_group = vmail
 EOF
 
 echo -e "${CGREEN}-> Mise en place du fichier /etc/dovecot/conf.d/10-auth.conf ${CEND}"
 cat > /etc/dovecot/conf.d/10-auth.conf <<EOF
-## Authentication processes
-
-# Disable LOGIN command and all other plaintext authentications unless
-# SSL/TLS is used (LOGINDISABLED capability). Note that if the remote IP
-# matches the local IP (ie. you're connecting from the same computer), the
-# connection is considered secure and plaintext authentication is allowed.
 disable_plaintext_auth = yes
-
-# Space separated list of wanted authentication mechanisms:
-# plain login digest-md5 cram-md5 ntlm rpa apop anonymous gssapi otp skey
-# gss-spnego
-# NOTE: See also disable_plaintext_auth setting.
 auth_mechanisms = plain login
-
-#
-# Password database is used to verify user's password (and nothing more).
-# You can have multiple passdbs and userdbs. This is useful if you want to
-# allow both system users (/etc/passwd) and virtual users to login without
-# duplicating the system users into virtual database.
-#
-# <doc/wiki/PasswordDatabase.txt>
-#
-# User database specifies where mails are located and what user/group IDs
-# own them. For single-UID configuration use "static" userdb.
-#
-# <doc/wiki/UserDatabase.txt>
 !include auth-sql.conf.ext
 EOF
 
@@ -849,55 +925,68 @@ EOF
 echo -e "${CGREEN}-> Mise en place du fichier /etc/dovecot/conf.d/10-master.conf ${CEND}"
 cat > /etc/dovecot/conf.d/10-master.conf <<EOF
 service imap-login {
-  inet_listener imap {
-    port = 0
-  }
+
+    inet_listener imap {
+        port = 143
+    }
+
+    inet_listener imaps {
+        port = 993
+        ssl = yes
+    }
+
+    service_count = 0
+
+}
+
+service imap {
+
 }
 
 service lmtp {
-  # On autorise Postfix à transférer les emails dans le spooler de Dovecot via LMTP
-  unix_listener /var/spool/postfix/private/dovecot-lmtp {
-      mode = 0600
-      user = postfix
-      group = postfix
-  }
+
+    unix_listener /var/spool/postfix/private/dovecot-lmtp {
+        mode = 0600
+        user = postfix
+        group = postfix
+    }
+
 }
 
 service auth {
-  # On autorise Postfix à se connecter à Dovecot via LMTP
-  unix_listener /var/spool/postfix/private/auth {
-      mode = 0666
-      user = postfix
-      group = postfix
-  }
 
-  # On indique à Dovecot les permissions du conteneur local
-  unix_listener auth-userdb {
-      mode = 0600
-      user = vmail
-  }
+    unix_listener /var/spool/postfix/private/auth {
+        mode = 0666
+        user = postfix
+        group = postfix
+    }
 
-  user = dovecot
+    unix_listener auth-userdb {
+        mode = 0600
+        user = vmail
+        group = vmail
+    }
+
+    user = dovecot
+
 }
 
 service auth-worker {
-  user = vmail
+
+    user = vmail
+
 }
 EOF
 
 echo -e "${CGREEN}-> Mise en place du fichier /etc/dovecot/conf.d/10-ssl.conf ${CEND}"
 cat > /etc/dovecot/conf.d/10-ssl.conf <<EOF
-## SSL settings
-
-# SSL/TLS support: yes, no, required. <doc/wiki/SSL.txt>
 ssl = required
-
-# PEM encoded X.509 SSL/TLS certificate and private key. They're opened before
-# dropping root privileges, so keep the key file unreadable by anyone but
-# root. Included doc/mkcert.sh can be used to easily generate self-signed
-# certificate, just make sure to update the domains in dovecot-openssl.cnf
-ssl_cert = </etc/ssl/certs/dovecot.pem
-ssl_key = </etc/ssl/private/dovecot.pem
+ssl_cert = </etc/ssl/certs/mailserver_dovecot.crt
+ssl_key = </etc/ssl/private/mailserver_dovecot.key
+ssl_protocols = !SSLv2 !SSLv3
+ssl_cipher_list = ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA
+ssl_prefer_server_ciphers = yes
+ssl_dh_parameters_length = 2048
 EOF
 
 smallLoader
@@ -927,7 +1016,7 @@ cat > /etc/opendkim.conf <<EOF
 AutoRestart             Yes
 AutoRestartRate         10/1h
 UMask                   002
-Syslog                  yes
+Syslog                  Yes
 SyslogSuccess           Yes
 LogWhy                  Yes
 
@@ -952,8 +1041,12 @@ echo 'SOCKET="inet:12301@localhost"' > /etc/default/opendkim
 
 echo -e "${CGREEN}-> Mise à jour du fichier de configuration de Postfix ${CEND}"
 cat >> /etc/postfix/main.cf <<EOF
-# Configuration de DKIM
-milter_protocol = 2
+
+#############
+## MILTERS ##
+#############
+
+milter_protocol = 6
 milter_default_action = accept
 smtpd_milters = inet:localhost:12301
 non_smtpd_milters = inet:localhost:12301
@@ -993,7 +1086,7 @@ echo -e "${CGREEN}-> Création du répertoire /etc/opendkim/keys/${DOMAIN} ${CEN
 mkdir $DOMAIN && cd $DOMAIN
 
 echo -e "${CGREEN}-> Génération des clés de chiffrement ${CEND}"
-opendkim-genkey -s mail -d $DOMAIN
+opendkim-genkey -s mail -d $DOMAIN -b 4096
 
 echo -e "${CGREEN}-> Modification des permissions des clés ${CEND}"
 chown opendkim:opendkim mail.private
@@ -1047,81 +1140,81 @@ fi
 
 echo -e "${CGREEN}-> Ajout du vhost rainloop ${CEND}"
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
-	cat > /etc/nginx/sites-enabled/rainloop.conf <<EOF
-	server {
-	    listen 	    ${PORT};
-	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
-	    return 301 	    https://\$server_name\$request_uri; # enforce https
-	}
+cat > /etc/nginx/sites-enabled/rainloop.conf <<EOF
+server {
+    listen 	      ${PORT};
+    server_name   ${RAINLOOPDOMAIN}.${DOMAIN};
+    return 301 	  https://\$server_name\$request_uri; # enforce https
+}
 
-	server {
-	    listen          443 ssl;
-	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
-	    root            /var/www/rainloop;
-	    index           index.php;
-	    charset         utf-8;
+server {
+    listen        443 ssl;
+    server_name   ${RAINLOOPDOMAIN}.${DOMAIN};
+    root          /var/www/rainloop;
+    index         index.php;
+    charset       utf-8;
 
-	    ## SSL settings
-	    ssl_certificate           /etc/nginx/ssl/server.crt;
-	    ssl_certificate_key       /etc/nginx/ssl/server.key;
-	    ssl_protocols             TLSv1.2;
-	    ssl_ciphers               "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
-	    ssl_prefer_server_ciphers on;
-	    ssl_session_cache         shared:SSL:10m;
-	    ssl_session_timeout       10m;
-	    ssl_ecdh_curve            secp521r1;
+    ## SSL settings
+    ssl_certificate           /etc/ssl/certs/mailserver_nginx.crt;
+    ssl_certificate_key       /etc/ssl/private/mailserver_nginx.key;
+    ssl_protocols             TLSv1.2;
+    ssl_ciphers               "EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache         shared:SSL:10m;
+    ssl_session_timeout       10m;
+    ssl_ecdh_curve            secp521r1;
 
-	    add_header Strict-Transport-Security max-age=31536000;
+    add_header Strict-Transport-Security max-age=31536000;
 
-	    auth_basic "Webmail - Connexion";
-	    auth_basic_user_file ${PASSWDPATH};
+    auth_basic "Webmail - Connexion";
+    auth_basic_user_file ${PASSWDPATH};
 
-	    location ^~ /data {
-	        deny all;
-	    }
+    location ^~ /data {
+        deny all;
+    }
 
-	    location / {
-	        try_files \$uri \$uri/ index.php;
-	    }
+    location / {
+        try_files \$uri \$uri/ index.php;
+    }
 
-	    location ~* \.php$ {
-	        include       /etc/nginx/fastcgi_params;
-	        fastcgi_pass  unix:/var/run/php5-fpm.sock;
-	        fastcgi_index index.php;
-	        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-	    }
-	}
+    location ~* \.php$ {
+        include       /etc/nginx/fastcgi_params;
+        fastcgi_pass  unix:/var/run/php5-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+    }
+}
 EOF
 else
-	cat > /etc/nginx/sites-enabled/rainloop.conf <<EOF
-	server {
-	    listen 	    ${PORT};
-    	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
+cat > /etc/nginx/sites-enabled/rainloop.conf <<EOF
+server {
+    listen 	     ${PORT};
+    server_name  ${RAINLOOPDOMAIN}.${DOMAIN};
 
-	    root            /var/www/rainloop;
-	    index           index.php;
-	    charset         utf-8;
+    root         /var/www/rainloop;
+    index        index.php;
+    charset      utf-8;
 
-	    add_header Strict-Transport-Security max-age=31536000;
+    add_header Strict-Transport-Security max-age=31536000;
 
-	    auth_basic "Webmail - Connexion";
-	    auth_basic_user_file ${PASSWDPATH};
+    auth_basic "Webmail - Connexion";
+    auth_basic_user_file ${PASSWDPATH};
 
-	    location ^~ /data {
-	        deny all;
-	    }
+    location ^~ /data {
+        deny all;
+    }
 
-	    location / {
-	        try_files \$uri \$uri/ index.php;
-	    }
+    location / {
+        try_files \$uri \$uri/ index.php;
+    }
 
-	    location ~* \.php$ {
-	        include       /etc/nginx/fastcgi_params;
-	        fastcgi_pass  unix:/var/run/php5-fpm.sock;
-	        fastcgi_index index.php;
-	        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-	    }
-	}
+    location ~* \.php$ {
+        include       /etc/nginx/fastcgi_params;
+        fastcgi_pass  unix:/var/run/php5-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+    }
+}
 EOF
 fi
 
@@ -1150,7 +1243,7 @@ echo -e "${CCYAN}[  REDÉMARRAGE DES SERVICES  ]${CEND}"
 echo -e "${CCYAN}------------------------------${CEND}"
 echo ""
 
-echo -n "${CCYAN}-> Redémarrage de Postfix.${CEND}"
+echo -n "-> Redémarrage de Postfix."
 service postfix restart
 
 if [ $? -ne 0 ]; then
@@ -1163,7 +1256,7 @@ fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-echo -n "${CCYAN}-> Redémarrage de Dovecot.${CEND}"
+echo -n "-> Redémarrage de Dovecot."
 service dovecot restart
 
 if [ $? -ne 0 ]; then
@@ -1176,7 +1269,7 @@ fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-echo -n "${CCYAN}-> Redémarrage d'OpenDKIM.${CEND}"
+echo -n "-> Redémarrage d'OpenDKIM."
 service opendkim restart
 
 if [ $? -ne 0 ]; then
@@ -1240,23 +1333,24 @@ else
 	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}:${PORT}/?admin${CEND}"
 fi
 echo ""
-echo -e "${CBROWN}Par défaut les identifiants sont :${CEND} ${CGREEN}admin${CEND} et ${CGREEN}12345${CEND}"
+echo -e "${CBROWN}Par défaut les identifiants sont :${CEND} ${CGREEN}admin${CEND} ${CBROWN}et${CEND} ${CGREEN}12345${CEND}"
 echo -e "${CBROWN}Allez voir le tutoriel pour savoir comment rajouter un domaine à Rainloop :${CEND}"
 echo ""
 echo -e "${CYELLOW}> http://mondedie.fr/viewtopic.php?id=5750${CEND}"
 echo ""
 echo -e "${CBROWN}Une fois que Rainloop sera correctement configuré, vous pourrez accéder${CEND}"
-echo -e "à votre boîte mail via cette URL :${CEND}"
+echo -e "${CBROWN}à votre boîte mail via cette URL :${CEND}"
 echo ""
 if [[ "$PORT" = "80" ]]; then
-	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}/{CEND}"
+	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}/${CEND}"
 else
-	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}:${PORT}/{CEND}"
+	echo -e "${CYELLOW}> http://${RAINLOOPDOMAIN}.${DOMAIN}:${PORT}/${CEND}"
 fi
 echo -e "${CBROWN}---------------------------------------------------------------------------${CEND}"
 echo ""
 
 smallLoader
+clear
 
 echo -e "${CCYAN}-------------------------------------${CEND}"
 echo -e "${CCYAN}[ PARAMÈTRES DE CONNEXION IMAP/SMTP ]${CEND}"
@@ -1264,7 +1358,7 @@ echo -e "${CCYAN}-------------------------------------${CEND}"
 echo ""
 
 echo -e "${CGREEN}-> Utilisez les paramètres suivants pour configurer le client mail de votre choix.${CEND}"
-echo -e "${CGREEN}-> Le tutoriel suivant explique comment configurer Outlook, MailBird et eM Client.${CEND}"
+echo -e "${CGREEN}-> Le tutoriel indiqué ci-dessous explique comment configurer Outlook, MailBird et eM Client.${CEND}"
 echo ""
 
 echo -e "${CYELLOW}> http://mondedie.fr/viewtopic.php?pid=11727#p11727${CEND}"
@@ -1284,6 +1378,7 @@ echo -e "${CBROWN}--------------------------------------------------------------
 echo ""
 
 smallLoader
+clear
 
 echo -e "${CCYAN}----------------------------${CEND}"
 echo -e "${CCYAN}[ CONFIGURATION DE VOS DNS ]${CEND}"

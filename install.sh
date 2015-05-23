@@ -156,7 +156,7 @@ echo ""
 echo -e "${CCYAN}-----------------------------------------------------------------------${CEND}"
 echo ""
 
-read -p "Souhaitez-vous les modifier ? o/[N] : " REPFQDN
+read -p "Souhaitez-vous les modifier ? o /[N] : " REPFQDN
 
 if [[ "$REPFQDN" = "O" ]] || [[ "$REPFQDN" = "o" ]]; then
 
@@ -205,9 +205,9 @@ echo -e "${CCYAN}-----------------------------${CEND}"
 echo ""
 
 # Si on a redirigé le port 80 vers un autre port, cela peut vouloir dire que le 443 n'est pas non plus accessible, NAT, VM, ...
-# On demande si on veut faire du HTTPS 
+# On demande si on veut faire du HTTPS
 SSL_OK="o"
-read -p "Souhaitez-vous utiliser le SSL (https - port 443) pour les interfaces web ? [o]/n : " SSL_OK
+read -p "Souhaitez-vous utiliser le SSL (https - port 443) pour les interfaces web ? [O]/n : " SSL_OK
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	mkdir -p /etc/nginx/ssl
 	openssl req -new -x509 -days 3658 -nodes -newkey rsa:2048 -out /etc/nginx/ssl/server.crt -keyout /etc/nginx/ssl/server.key<<EOF
@@ -220,6 +220,9 @@ ${DOMAIN}
 contact@${DOMAIN}
 EOF
 fi
+
+smallLoader
+clear
 
 echo ""
 echo -e "${CCYAN}-----------------------------${CEND}"
@@ -369,7 +372,7 @@ if [ "$PASSWDPATH" = "" ]; then
     PASSWDPATH="/etc/nginx/passwd"
 fi
 
-if [ $(cat $PASSWDPATH) == '' ]; then
+if [ $(cat $PASSWDPATH) == '' ] || [ ! -f "$PASSWDPATH" ]; then
     USERAUTH="Admin"
     PASSWDAUTH="1234"
     echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
@@ -390,14 +393,14 @@ if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	  server_name     ${PFADOMAIN}.${DOMAIN};
 	  return 301      https://\$server_name\$request_uri; # enforce https
 	}
-	
+
 	server {
 	    listen          443 ssl;
 	    server_name     ${PFADOMAIN}.${DOMAIN};
 	    root            /var/www/postfixadmin;
 	    index           index.php;
 	    charset         utf-8;
-	
+
 	    ## SSL settings
 	    ssl_certificate           /etc/nginx/ssl/server.crt;
 	    ssl_certificate_key       /etc/nginx/ssl/server.key;
@@ -407,16 +410,16 @@ if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	    ssl_session_cache         shared:SSL:10m;
 	    ssl_session_timeout       10m;
 	    ssl_ecdh_curve            secp521r1;
-	
+
 	    add_header Strict-Transport-Security max-age=31536000;
-	
+
 	    auth_basic "PostfixAdmin - Connexion";
 	    auth_basic_user_file ${PASSWDPATH};
-	
+
 	    location / {
 	        try_files \$uri \$uri/ index.php;
 	    }
-	
+
 	    location ~* \.php$ {
 	        include       /etc/nginx/fastcgi_params;
 	        fastcgi_pass  unix:/var/run/php5-fpm.sock;
@@ -425,7 +428,7 @@ if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	    }
 	}
 EOF
-else 
+else
 	cat > /etc/nginx/sites-enabled/postfixadmin.conf <<EOF
 	server {
 	  listen          ${PORT};
@@ -433,14 +436,14 @@ else
 	  root            /var/www/postfixadmin;
 	  index           index.php;
 	  charset         utf-8;
-	  
+
 	  auth_basic "PostfixAdmin - Connexion";
 	  auth_basic_user_file ${PASSWDPATH};
-	
+
 	  location / {
 	      try_files \$uri \$uri/ index.php;
 	  }
-	
+
 	  location ~* \.php$ {
 	      include       /etc/nginx/fastcgi_params;
 	      fastcgi_pass  unix:/var/run/php5-fpm.sock;
@@ -570,7 +573,7 @@ smtpd_sender_restrictions =
      permit_mynetworks,
      reject_non_fqdn_sender,
      reject_unknown_sender_domain
-     
+
 smtpd_relay_restrictions =
      permit_mynetworks,
      reject_unknown_sender_domain,
@@ -694,7 +697,36 @@ echo -e "${CGREEN}-> Positionnement des droits sur le répertoire /etc/dovecot $
 chown -R vmail:dovecot /etc/dovecot
 chmod -R o-rwx /etc/dovecot
 
-echo -e "${CGREEN}-> Déplacement du certificat SSL et de la clé privée dans les répertoires par défaut ${CEND}"
+echo -e "${CGREEN}-> Création du certificat SSL et de la clé privée avec mkcert.sh${CEND}"
+cat > /usr/share/dovecot/dovecot-openssl.cnf <<EOF
+#
+# SSLeay configuration file for Dovecot.
+#
+
+RANDFILE                = /dev/urandom
+
+[ req ]
+default_bits            = 4096
+default_keyfile         = dovecot.pem
+distinguished_name      = req_distinguished_name
+prompt                  = no
+policy                  = policy_anything
+req_extensions          = v3_req
+x509_extensions         = v3_req
+
+[ req_distinguished_name ]
+organizationName = Dovecot mail server
+organizationalUnitName = IT
+commonName = ${FQDN}
+emailAddress = admin@${DOMAIN}
+
+[ v3_req ]
+basicConstraints = CA:FALSE
+EOF
+
+cd /usr/share/dovecot/
+sh ./mkcert.sh
+
 mv /etc/dovecot/dovecot.pem /etc/ssl/certs
 mv /etc/dovecot/private/dovecot.pem /etc/ssl/private
 
@@ -1010,14 +1042,14 @@ if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
 	    return 301 	    https://\$server_name\$request_uri; # enforce https
 	}
-	
+
 	server {
 	    listen          443 ssl;
 	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
 	    root            /var/www/rainloop;
 	    index           index.php;
 	    charset         utf-8;
-	
+
 	    ## SSL settings
 	    ssl_certificate           /etc/nginx/ssl/server.crt;
 	    ssl_certificate_key       /etc/nginx/ssl/server.key;
@@ -1027,20 +1059,20 @@ if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	    ssl_session_cache         shared:SSL:10m;
 	    ssl_session_timeout       10m;
 	    ssl_ecdh_curve            secp521r1;
-	
+
 	    add_header Strict-Transport-Security max-age=31536000;
-	
+
 	    auth_basic "Webmail - Connexion";
 	    auth_basic_user_file ${PASSWDPATH};
-	
+
 	    location ^~ /data {
 	        deny all;
 	    }
-	
+
 	    location / {
 	        try_files \$uri \$uri/ index.php;
 	    }
-	
+
 	    location ~* \.php$ {
 	        include       /etc/nginx/fastcgi_params;
 	        fastcgi_pass  unix:/var/run/php5-fpm.sock;
@@ -1054,24 +1086,24 @@ else
 	server {
 	    listen 	    ${PORT};
     	    server_name     ${RAINLOOPDOMAIN}.${DOMAIN};
-		
+
 	    root            /var/www/rainloop;
 	    index           index.php;
 	    charset         utf-8;
-	
+
 	    add_header Strict-Transport-Security max-age=31536000;
-	
+
 	    auth_basic "Webmail - Connexion";
 	    auth_basic_user_file ${PASSWDPATH};
-	
+
 	    location ^~ /data {
 	        deny all;
 	    }
-	
+
 	    location / {
 	        try_files \$uri \$uri/ index.php;
 	    }
-	
+
 	    location ~* \.php$ {
 	        include       /etc/nginx/fastcgi_params;
 	        fastcgi_pass  unix:/var/run/php5-fpm.sock;

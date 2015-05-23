@@ -6,7 +6,7 @@ Topic associé : http://mondedie.fr/viewtopic.php?pid=11746
 
 ### Pré-requis :
 
-- ``Debian 7 “wheezy”``
+- ``Debian 7 “wheezy” ou Debian 8 “jessie”``
 - ``Nginx``
 - ``PHP``
 - ``MySQL``

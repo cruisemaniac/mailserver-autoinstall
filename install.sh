@@ -6,7 +6,9 @@
 # URLs : https://github.com/hardware/mailserver-autoinstall
 #        http://mondedie.fr/viewtopic.php?pid=11746
 #
-# Nécessite Debian 7 “wheezy” - 32/64 bits minimum. Ainsi que :
+# Compatible : Debian 7 "wheezy" & Debian 8 "jessie"
+#
+# Pré-requis
 # Nginx, PHP, MySQL, OpenSSL (Un serveur LEMP fonctionnel)
 #
 # Tiré du tutoriel sur mondedie.fr disponible ici:
@@ -36,6 +38,7 @@ CCYAN="${CSI}1;36m"
 CBROWN="${CSI}0;33m"
 
 POSTFIXADMIN_VER="2.92"
+DEBIAN_VER=$(sed 's/\..*//' /etc/debian_version)
 
 # ##########################################################################
 
@@ -1105,6 +1108,128 @@ clear
 
 # ##########################################################################
 
+echo -e "${CCYAN}----------------------------------${CEND}"
+echo -e "${CCYAN}[  INSTALLATION DE SPAMASSASSIN  ]${CEND}"
+echo -e "${CCYAN}----------------------------------${CEND}"
+echo ""
+
+echo -e "${CGREEN}-> Installation de spamassassin et spamc${CEND}"
+echo ""
+apt-get install -y spamassassin spamc
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation de Spamassassin.${CEND}" 1>&2
+    echo ""
+    exit 1
+fi
+
+echo -e "${CGREEN}-> Modification du fichier /etc/postfix/master.cf${CEND}"
+sed -i '/\(.*smtp\([^s]\).*inet.*n.*smtpd.*\)/a \ \ -o content_filter=spamassassin' /etc/postfix/master.cf
+sed -i '/\(.*submission.*inet.*n.*smtpd.*\)/a \ \ -o content_filter=spamassassin' /etc/postfix/master.cf
+
+cat >> /etc/postfix/master.cf <<EOF
+spamassassin unix -     n       n       -       -       pipe
+  user=debian-spamd argv=/usr/bin/spamc -f -e /usr/sbin/sendmail -oi -f ${sender} ${recipient}
+EOF
+
+echo -e "${CGREEN}-> Modification du fichier /etc/spamassassin/local.cf${CEND}"
+cat > /etc/spamassassin/local.cf <<EOF
+rewrite_header Subject *****SPAM*****
+report_safe 0
+
+add_header all Report _REPORT_
+add_header spam Flag _YESNOCAPS_
+add_header all Status _YESNO_, score=_SCORE_ required=_REQD_ tests=_TESTS_ autolearn=_AUTOLEARN_ version=_VERSION_
+add_header all Level _STARS(*)_
+add_header all Checker-Version SpamAssassin _VERSION_ (_SUBVERSION_) on _HOSTNAME_
+EOF
+
+echo -e "${CGREEN}-> Modification du fichier /etc/default/spamassassin${CEND}"
+sed -i "s|\(CRON.*=\).*|\11|" /etc/default/spamassassin
+
+if [ "$DEBIAN_VER" = "7" ]; then
+    # ENABLED=1 pour les systèmes qui utilisent sysvinit
+    sed -i "s|\(ENABLED.*=\).*|\11|" /etc/default/spamassassin
+fi
+
+if [ "$DEBIAN_VER" = "8" ]; then
+    # ENABLED=0 pour les systèmes qui utilisent systemd
+    sed -i "s|\(ENABLED.*=\).*|\10|" /etc/default/spamassassin
+fi
+
+echo -e "${CGREEN}-> Modification du crontab${CEND}"
+(crontab -l ; echo "20 02 * * * /usr/bin/sa-update") | crontab -
+
+smallLoader
+clear
+
+# ##########################################################################
+
+echo -e "${CCYAN}--------------------------${CEND}"
+echo -e "${CCYAN}[  INSTALLATION DE SIEVE ]${CEND}"
+echo -e "${CCYAN}--------------------------${CEND}"
+echo ""
+
+echo -e "${CGREEN}-> Installation de dovecot-sieve et dovecot-managesieved${CEND}"
+echo ""
+apt-get install -y dovecot-sieve dovecot-managesieved
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation de Sieve.${CEND}" 1>&2
+    echo ""
+    exit 1
+fi
+
+echo -e "${CGREEN}-> Modification du fichier /etc/dovecot/dovecot.conf${CEND}"
+sed -i -e "s|\(protocols.*=\).*|\1 imap lmtp sieve|" /etc/dovecot/dovecot.conf
+
+echo -e "${CGREEN}-> Modification du fichier /etc/dovecot/conf.d/20-lmtp.conf${CEND}"
+cat > /etc/dovecot/conf.d/20-lmtp.conf <<EOF
+protocol lmtp {
+
+  postmaster_address = postmaster@${DOMAIN}
+  mail_plugins = $mail_plugins sieve
+
+}
+EOF
+
+echo -e "${CGREEN}-> Modification du fichier /etc/dovecot/conf.d/90-sieve.conf${CEND}"
+cat > /etc/dovecot/conf.d/90-sieve.conf <<EOF
+plugin {
+
+    sieve = /var/mail/vhosts/%d/%n/.dovecot.sieve
+    sieve_default = /var/mail/sieve/default.sieve
+    sieve_dir = /var/mail/vhosts/%d/%n/sieve
+    sieve_global_dir = /var/mail/sieve
+
+}
+EOF
+
+echo -e "${CGREEN}-> Création du répertoire /var/mail/sieve${CEND}"
+mkdir /var/mail/sieve
+touch /var/mail/sieve/default.sieve && chown -R vmail:vmail /var/mail/sieve
+
+echo -e "${CGREEN}-> Création d'une règle pour les spams${CEND}"
+cat > /var/mail/sieve/default.sieve <<EOF
+require ["fileinto"];
+
+if header :contains "Subject" "*****SPAM*****" {
+
+    fileinto "Junk";
+
+}
+EOF
+
+echo -e "${CGREEN}-> Compilation des règles sieve${CEND}"
+sievec /var/mail/sieve/default.sieve
+
+smallLoader
+clear
+
+# ##########################################################################
+
 echo -e "${CCYAN}------------------------------${CEND}"
 echo -e "${CCYAN}[  INSTALLATION DE RAINLOOP  ]${CEND}"
 echo -e "${CCYAN}------------------------------${CEND}"
@@ -1259,7 +1384,7 @@ if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Postfix.${CEND}" 1>&2
     echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}\n\n" 1>&2
-    echo -e "${CRED}POSTFIX: `service postfix status` !${CEND}"  1>&2
+    echo -e "${CRED}POSTFIX: `service postfix status`${CEND}"  1>&2
     echo ""
     exit 1
 fi
@@ -1274,7 +1399,7 @@ if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Dovecot.${CEND}" 1>&2
     echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}\n\n" 1>&2
-    echo -e "${CRED}DOVECOT: `service dovecot status` !${CEND}"  1>&2
+    echo -e "${CRED}DOVECOT: `service dovecot status`${CEND}"  1>&2
     echo ""
     exit 1
 fi
@@ -1288,12 +1413,35 @@ service opendkim restart
 if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDKIM.${CEND}\n\n" 1>&2
-    echo -e "${CRED}OPENDKIM: `service opendkim status` !${CEND}"  1>&2
+    echo -e "${CRED}OPENDKIM: `service opendkim status`${CEND}"  1>&2
     echo ""
     exit 1
 fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
+
+echo -n "-> Redémarrage de SpamAssassin."
+echo ""
+service spamassassin restart
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de SpamAssassin.${CEND}\n\n" 1>&2
+    echo -e "${CRED}SPAMASSASSIN: `service spamassassin status`${CEND}"  1>&2
+    echo ""
+    exit 1
+fi
+
+echo -e " ${CGREEN}[OK]${CEND}"
+
+if [ "$DEBIAN_VER" = "8" ]; then
+
+    systemctl enable postfix.service
+    systemctl enable dovecot.service
+    systemctl enable opendkim.service
+    systemctl enable spamassassin.service
+
+fi
 
 echo ""
 echo -e "${CCYAN}----------------------------${CEND}"

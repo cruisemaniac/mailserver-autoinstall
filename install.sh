@@ -207,7 +207,7 @@ echo ""
 # Si on a redirigé le port 80 vers un autre port, cela peut vouloir dire que le 443 n'est pas non plus accessible, NAT, VM, ...
 # On demande si on veut faire du HTTPS
 SSL_OK="o"
-read -p "Souhaitez-vous utiliser le SSL (https - port 443) pour les interfaces web ? [O]/n : " SSL_OK
+read -p "Souhaitez-vous utiliser SSL/TLS (HTTPS - port 443) pour les interfaces web ? [O]/n : " SSL_OK
 if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 	mkdir -p /etc/nginx/ssl
 	openssl req -new -x509 -days 3658 -nodes -newkey rsa:2048 -out /etc/nginx/ssl/server.crt -keyout /etc/nginx/ssl/server.key<<EOF
@@ -378,9 +378,10 @@ if [[ ! -s "$PASSWDPATH" ]] || [[ ! -f "$PASSWDPATH" ]]; then
     PASSWDAUTH="1234"
 
     echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
-    echo -e "${CCYAN} Votre fichier ${PASSWDPATH} est vide ou n'existe pas. Veuillez entrer les informations suivantes.${CEND}"
+    echo -e "${CCYAN}Votre fichier ${PASSWDPATH} est vide ou n'existe pas.${CEND}"
+    echo -e "${CCYAN}Veuillez entrer les informations suivantes :${CEND}"
     read -p "> Nom d'utilisateur [Par défaut : Admin] : " USERAUTH
-    read -p "> Mot de passe [Par défaut : 1234] : " PASSWDAUTH
+    read -sp "> Mot de passe [Par défaut : 1234] : " PASSWDAUTH
     echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
     printf "${USERAUTH}:$(openssl passwd -crypt ${PASSWDAUTH})\n" >> $PASSWDPATH
 
@@ -1143,31 +1144,43 @@ echo -e "${CCYAN}[  REDÉMARRAGE DES SERVICES  ]${CEND}"
 echo -e "${CCYAN}------------------------------${CEND}"
 echo ""
 
+echo -n "${CCYAN}-> Redémarrage de Postfix.${CEND}"
 service postfix restart
 
 if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Postfix.${CEND}" 1>&2
-    echo -e "\n ${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}" 1>&2
+    echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}" 1>&2
+    echo -e "${CRED}POSTFIX: `service postfix status` !${CEND}"  1>&2
     echo ""
 fi
 
+echo -e " ${CGREEN}[OK]${CEND}"
+
+echo -n "${CCYAN}-> Redémarrage de Dovecot.${CEND}"
 service dovecot restart
 
 if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Dovecot.${CEND}" 1>&2
-    echo -e "\n ${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}" 1>&2
+    echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}" 1>&2
+    echo -e "${CRED}DOVECOT: `service dovecot status` !${CEND}"  1>&2
     echo ""
 fi
 
+echo -e " ${CGREEN}[OK]${CEND}"
+
+echo -n "${CCYAN}-> Redémarrage d'OpenDKIM.${CEND}"
 service opendkim restart
 
 if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDKIM.${CEND}" 1>&2
+    echo -e "${CRED}OPENDKIM: `service opendkim status` !${CEND}"  1>&2
     echo ""
 fi
+
+echo -e " ${CGREEN}[OK]${CEND}"
 
 echo ""
 echo -e "${CCYAN}----------------------------${CEND}"
@@ -1180,11 +1193,7 @@ NBPORT=$(netstat -ptna | grep '0.0.0.0:25\|0.0.0.0:587\|0.0.0.0:993\|127.0.0.1:1
 # Vérification des ports
 if [ $NBPORT -ne 4 ]; then
     echo ""
-    echo -e "${CRED}/!\ ERREUR: Nombre de ports invalide !${CEND}" 1>&2
-    echo ""
-    echo -e "${CRED}POSTFIX: `service postfix  status` !${CEND}"  1>&2
-    echo -e "${CRED}DOVECOT: `service dovecot  status` !${CEND}"  1>&2
-    echo -e "${CRED}DOVECOT: `service opendkim status` !${CEND}"  1>&2
+    echo -e "${CRED}/!\ ERREUR: Nombre de ports invalide ! Un service n'a pas démarré correctement.${CEND}" 1>&2
     echo ""
     exit 1
 else

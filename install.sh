@@ -424,7 +424,7 @@ if [ ! -f postfixadmin-$POSTFIXADMIN_VER.tar.gz ]; then
     exit 1
 fi
 
-echo -e "${CGREEN}-> Décompression du PostfixAdmin ${CEND}"
+echo -e "${CGREEN}-> Décompression de PostfixAdmin ${CEND}"
 tar -xzf postfixadmin-$POSTFIXADMIN_VER.tar.gz
 
 echo -e "${CGREEN}-> Création du répertoire /var/www/postfixadmin ${CEND}"
@@ -1130,7 +1130,7 @@ sed -i '/\(.*submission.*inet.*n.*smtpd.*\)/a \ \ -o content_filter=spamassassin
 
 cat >> /etc/postfix/master.cf <<EOF
 spamassassin unix -     n       n       -       -       pipe
-  user=debian-spamd argv=/usr/bin/spamc -f -e /usr/sbin/sendmail -oi -f ${sender} ${recipient}
+  user=debian-spamd argv=/usr/bin/spamc -f -e /usr/sbin/sendmail -oi -f \${sender} \${recipient}
 EOF
 
 echo -e "${CGREEN}-> Modification du fichier /etc/spamassassin/local.cf${CEND}"

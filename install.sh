@@ -1377,7 +1377,6 @@ echo -e "${CCYAN}------------------------------${CEND}"
 echo ""
 
 echo -n "-> Redémarrage de Postfix."
-echo ""
 service postfix restart
 
 if [ $? -ne 0 ]; then
@@ -1392,7 +1391,6 @@ fi
 echo -e " ${CGREEN}[OK]${CEND}"
 
 echo -n "-> Redémarrage de Dovecot."
-echo ""
 service dovecot restart
 
 if [ $? -ne 0 ]; then
@@ -1407,7 +1405,6 @@ fi
 echo -e " ${CGREEN}[OK]${CEND}"
 
 echo -n "-> Redémarrage d'OpenDKIM."
-echo ""
 service opendkim restart
 
 if [ $? -ne 0 ]; then
@@ -1421,7 +1418,6 @@ fi
 echo -e " ${CGREEN}[OK]${CEND}"
 
 echo -n "-> Redémarrage de SpamAssassin."
-echo ""
 service spamassassin restart
 
 if [ $? -ne 0 ]; then
@@ -1436,6 +1432,7 @@ echo -e " ${CGREEN}[OK]${CEND}"
 
 if [ "$DEBIAN_VER" = "8" ]; then
 
+    echo -e "\n${CGREEN}-> Activation des services via Systemd\n${CEND}"
     systemctl enable postfix.service
     systemctl enable dovecot.service
     systemctl enable opendkim.service
@@ -1449,15 +1446,15 @@ echo -e "${CCYAN}[  VERIFICATION DES PORTS  ]${CEND}"
 echo -e "${CCYAN}----------------------------${CEND}"
 echo ""
 
-NBPORT=$(netstat -ptna | grep '0.0.0.0:25\|0.0.0.0:587\|0.0.0.0:993\|127.0.0.1:12301' | wc -l)
+NBPORT=$(netstat -ptna | grep '0.0.0.0:25\|0.0.0.0:143\|0.0.0.0:587\|0.0.0.0:993\|0.0.0.0:4190\|127.0.0.1:12301' | wc -l)
 
 # Vérification des ports
-if [ $NBPORT -ne 4 ]; then
+if [ $NBPORT -ne 6 ]; then
     echo -e "${CRED}/!\ ERREUR: Nombre de ports invalide ! Un service n'a pas démarré correctement.${CEND}" 1>&2
     echo ""
     exit 1
 else
-    echo -e "${CGREEN}PORTS : 25, 587, 993, 12301 [OK] ${CEND}"
+    echo -e "${CGREEN}PORTS : 25, 143, 587, 993, 4190, 12301 [OK] ${CEND}"
 fi
 
 echo ""

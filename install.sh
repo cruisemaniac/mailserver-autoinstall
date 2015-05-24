@@ -1046,11 +1046,13 @@ SignatureAlgorithm      rsa-sha256
 
 UserID                  opendkim:opendkim
 
-Socket                  inet:12301@localhost
+Socket                  local:/var/spool/postfix/opendkim/opendkim.sock
 EOF
 
-echo -e "${CGREEN}-> Mise en place du fichier /etc/default/opendkim ${CEND}"
-echo 'SOCKET="inet:12301@localhost"' > /etc/default/opendkim
+echo -e "${CGREEN}-> Création du répertoire /var/spool/postfix/opendkim${CEND}"
+mkdir /var/spool/postfix/opendkim
+chown opendkim: /var/spool/postfix/opendkim
+usermod -aG opendkim postfix
 
 echo -e "${CGREEN}-> Mise à jour du fichier de configuration de Postfix ${CEND}"
 cat >> /etc/postfix/main.cf <<EOF
@@ -1061,8 +1063,8 @@ cat >> /etc/postfix/main.cf <<EOF
 
 milter_protocol = 6
 milter_default_action = accept
-smtpd_milters = inet:localhost:12301
-non_smtpd_milters = inet:localhost:12301
+smtpd_milters = unix:/opendkim/opendkim.sock
+non_smtpd_milters = unix:/opendkim/opendkim.sock
 EOF
 
 echo -e "${CGREEN}-> Création du répertoire /etc/opendkim ${CEND}"
@@ -1103,6 +1105,54 @@ opendkim-genkey -s mail -d $DOMAIN -b 4096
 echo -e "${CGREEN}-> Modification des permissions des clés ${CEND}"
 chown opendkim:opendkim mail.private
 chmod 400 mail.private mail.txt
+
+smallLoader
+clear
+
+# ##########################################################################
+
+echo -e "${CCYAN}------------------------------${CEND}"
+echo -e "${CCYAN}[  INSTALLATION D'OPENDMARC  ]${CEND}"
+echo -e "${CCYAN}------------------------------${CEND}"
+echo ""
+
+echo -e "${CGREEN}-> Installation de opendmarc ${CEND}"
+echo ""
+apt-get install -y opendmarc
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation d'OpenDMARC.${CEND}" 1>&2
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo -e "${CGREEN}-> Mise en place du fichier /etc/opendmarc.conf ${CEND}"
+cat > /etc/opendmarc.conf <<EOF
+AutoRestart             Yes
+AutoRestartRate         10/1h
+UMask                   0002
+Syslog                  true
+
+AuthservID              "${FQDN}"
+TrustedAuthservIDs      "${FQDN}"
+IgnoreHosts             /etc/opendkim/TrustedHosts
+
+RejectFailures          false
+
+UserID                  opendmarc:opendmarc
+PidFile                 /var/run/opendmarc.pid
+Socket                  local:/var/spool/postfix/opendmarc/opendmarc.sock
+EOF
+
+echo -e "${CGREEN}-> Création du répertoire /var/spool/postfix/opendmarc${CEND}"
+mkdir /var/spool/postfix/opendmarc
+chown opendmarc: /var/spool/postfix/opendmarc
+usermod -aG opendmarc postfix
+
+echo -e "${CGREEN}-> Modification du fichier /etc/postfix/main.cf${CEND}"
+postconf -e smtpd_milters="unix:/opendkim/opendkim.sock, unix:/opendmarc/opendmarc.sock"
 
 smallLoader
 clear
@@ -1419,6 +1469,19 @@ fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
+echo -n "-> Redémarrage d'OpenDMARC."
+service opendmarc restart
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDMARC.${CEND}\n\n" 1>&2
+    echo -e "${CRED}OPENDMARC: `service OpenDMARC status`${CEND}"  1>&2
+    echo ""
+    exit 1
+fi
+
+echo -e " ${CGREEN}[OK]${CEND}"
+
 echo -n "-> Redémarrage de SpamAssassin."
 service spamassassin restart
 
@@ -1438,6 +1501,7 @@ if [ "$DEBIAN_VER" = "8" ]; then
     systemctl enable postfix.service
     systemctl enable dovecot.service
     systemctl enable opendkim.service
+    systemctl enable opendmarc.service
     systemctl enable spamassassin.service
 
 fi

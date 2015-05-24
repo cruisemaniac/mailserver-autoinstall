@@ -36,10 +36,6 @@ chmod +x uninstall.sh && ./uninstall.sh
 
 Ce script est tiré du tutoriel "Installation sécurisée d'un serveur de mail avec Postfix, Dovecot et Rainloop" : http://mondedie.fr/viewtopic.php?id=5750
 
-### Schéma
-
-![schema](https://meshup.net/img/mail-server-tutorial/schema.png "schema")
-
 Inspiré du script d'installation de rutorrent de ``Ex_Rat`` : https://bitbucket.org/exrat/install-rutorrent
 
 ### Support

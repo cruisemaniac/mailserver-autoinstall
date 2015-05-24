@@ -83,7 +83,7 @@ echo ""
 
 echo -e "${CGREEN}-> Désinstallation de Postfix, Dovecot et d'OpenDKIM ${CEND}"
 echo ""
-apt-get purge -y postfix postfix-mysql dovecot-core dovecot-imapd dovecot-lmtpd dovecot-mysql opendkim opendkim-tools spamassassin spamc dovecot-sieve dovecot-managesieved
+apt-get purge -y postfix postfix-mysql dovecot-core dovecot-imapd dovecot-lmtpd dovecot-mysql opendkim opendkim-tools opendmarc spamassassin spamc dovecot-sieve dovecot-managesieved
 apt-get -y autoremove
 apt-get -y clean
 
@@ -108,6 +108,10 @@ echo -e " ${CGREEN}[OK]${CEND}"
 
 echo -n "> /etc/opendkim.conf"
 rm -rf /etc/opendkim.conf
+echo -e " ${CGREEN}[OK]${CEND}"
+
+echo -n "> /etc/opendmarc.conf"
+rm -rf /etc/opendmarc.conf
 echo -e " ${CGREEN}[OK]${CEND}"
 
 echo -n "> /etc/default/opendkim"

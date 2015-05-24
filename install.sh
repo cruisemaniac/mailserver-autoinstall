@@ -670,6 +670,7 @@ myhostname    = ${FQDN}
 myorigin      = ${FQDN}
 mydestination = localhost localhost.\$mydomain
 mynetworks    = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+relayhost     =
 
 alias_maps     = hash:/etc/aliases
 alias_database = hash:/etc/aliases
@@ -680,10 +681,13 @@ alias_database = hash:/etc/aliases
 
 # SMTP ( OUTGOING )
 # ----------------------------------------------------------------------
-smtp_tls_loglevel               = 1
-smtp_tls_security_level         = may
-smtp_tls_CAfile                 = /etc/ssl/certs/mailserver_ca.crt
-smtp_tls_session_cache_database = btree:\${data_directory}/smtp_scache
+smtp_tls_loglevel            = 1
+smtp_tls_security_level      = may
+smtp_tls_CAfile              = /etc/ssl/certs/mailserver_ca.crt
+smtp_tls_protocols           = !SSLv2, !SSLv3, TLSv1
+smtp_tls_mandatory_protocols = !SSLv2, !SSLv3, TLSv1
+smtp_tls_mandatory_ciphers   = high
+smtp_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CDC3-SHA, KRB5-DE5, CBC3-SHA
 
 # SMTPD ( INCOMING )
 # ----------------------------------------------------------------------
@@ -691,30 +695,25 @@ smtpd_tls_loglevel            = 1
 smtpd_tls_auth_only           = yes
 smtpd_tls_security_level      = may
 smtpd_tls_received_header     = yes
+smtpd_tls_protocols           = !SSLv2, !SSLv3, TLSv1
 smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, TLSv1
 smtpd_tls_mandatory_ciphers   = high
 smtpd_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CDC3-SHA, KRB5-DE5, CBC3-SHA
+smtpd_tls_eecdh_grade         = ultra
+smtpd_tls_CAfile              = \$smtp_tls_CAfile
+smtpd_tls_cert_file           = /etc/ssl/certs/mailserver_postfix.crt
+smtpd_tls_key_file            = /etc/ssl/private/mailserver_postfix.key
+smtpd_tls_dh1024_param_file   = \$config_directory/dh2048.pem
+smtpd_tls_dh512_param_file    = \$config_directory/dh512.pem
 
-tls_random_source = dev:/dev/urandom
-
-# TLS PUBLIC CERTIFICATES AND PRIVATE KEY
-smtpd_tls_CAfile    = /etc/ssl/certs/mailserver_ca.crt
-smtpd_tls_cert_file = /etc/ssl/certs/mailserver_postfix.crt
-smtpd_tls_key_file  = /etc/ssl/private/mailserver_postfix.key
-
-# TLS/LMTP SESSION CACHE DATABASES
+smtp_tls_session_cache_database  = btree:\${data_directory}/smtp_scache
 smtpd_tls_session_cache_database = btree:\${data_directory}/smtpd_scache
 lmtp_tls_session_cache_database  = btree:\${data_directory}/lmtp_scache
 
-# CYPHERS AND CURVE PARAMETERS
-smtpd_tls_eecdh_grade  = ultra
 tls_eecdh_strong_curve = prime256v1
-tls_eecdh_ultra_curve  = secp384r1
+tls_eecdh_ultra_curve  = secp521r1
 tls_preempt_cipherlist = yes
-
-# DIFFIE-HELLMAN PARAMETERS
-smtpd_tls_dh1024_param_file = \$config_directory/dh2048.pem
-smtpd_tls_dh512_param_file  = \$config_directory/dh512.pem
+tls_random_source      = dev:/dev/urandom
 
 # ----------------------------------------------------------------------
 
@@ -1031,6 +1030,9 @@ Syslog                  Yes
 SyslogSuccess           Yes
 LogWhy                  Yes
 
+OversignHeaders         From
+AlwaysAddARHeader       Yes
+
 Canonicalization        relaxed/simple
 
 ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts
@@ -1070,8 +1072,7 @@ echo -e "${CGREEN}-> Mise en place du fichier /etc/opendkim/TrustedHosts ${CEND}
 cat > /etc/opendkim/TrustedHosts <<EOF
 127.0.0.1
 localhost
-192.168.0.1/24
-
+::1
 *.${DOMAIN}
 EOF
 
@@ -1137,6 +1138,7 @@ echo -e "${CGREEN}-> Modification du fichier /etc/spamassassin/local.cf${CEND}"
 cat > /etc/spamassassin/local.cf <<EOF
 rewrite_header Subject *****SPAM*****
 report_safe 0
+whitelist_from *@${DOMAIN}
 
 add_header all Report _REPORT_
 add_header spam Flag _YESNOCAPS_

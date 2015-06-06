@@ -83,6 +83,7 @@ command -v strings > /dev/null 2>&1 || { echo `checkBin binutils` >&2; exit 1; }
 command -v nginx > /dev/null 2>&1 || { echo `checkBin nginx` >&2; exit 1; }
 command -v git > /dev/null 2>&1 || { echo `checkBin git-core` >&2; exit 1; }
 command -v curl > /dev/null 2>&1 || { echo `checkBin curl` >&2; exit 1; }
+command -v dig > /dev/null 2>&1 || { echo `checkBin dnsutils` >&2; exit 1; }
 
 # ##########################################################################
 

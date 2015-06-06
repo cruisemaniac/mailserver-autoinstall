@@ -1513,15 +1513,15 @@ echo -e "${CCYAN}[  VERIFICATION DES PORTS  ]${CEND}"
 echo -e "${CCYAN}----------------------------${CEND}"
 echo ""
 
-NBPORT=$(netstat -ptna | grep '0.0.0.0:25\|0.0.0.0:143\|0.0.0.0:587\|0.0.0.0:993\|0.0.0.0:4190\|127.0.0.1:12301' | wc -l)
+NBPORT=$(netstat -ptna | grep '0.0.0.0:25\|0.0.0.0:143\|0.0.0.0:587\|0.0.0.0:993\|0.0.0.0:4190' | wc -l)
 
 # Vérification des ports
-if [ $NBPORT -ne 6 ]; then
+if [ $NBPORT -ne 5 ]; then
     echo -e "${CRED}/!\ ERREUR: Nombre de ports invalide ! Un service n'a pas démarré correctement.${CEND}" 1>&2
     echo ""
     exit 1
 else
-    echo -e "${CGREEN}PORTS : 25, 143, 587, 993, 4190, 12301 [OK] ${CEND}"
+    echo -e "${CGREEN}PORTS : 25, 143, 587, 993, 4190 [OK] ${CEND}"
 fi
 
 echo ""

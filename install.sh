@@ -1508,23 +1508,6 @@ if [ "$DEBIAN_VER" = "8" ]; then
 fi
 
 echo ""
-echo -e "${CCYAN}----------------------------${CEND}"
-echo -e "${CCYAN}[  VERIFICATION DES PORTS  ]${CEND}"
-echo -e "${CCYAN}----------------------------${CEND}"
-echo ""
-
-NBPORT=$(netstat -ptna | grep '0.0.0.0:25\|0.0.0.0:143\|0.0.0.0:587\|0.0.0.0:993\|0.0.0.0:4190' | wc -l)
-
-# Vérification des ports
-if [ $NBPORT -ne 5 ]; then
-    echo -e "${CRED}/!\ ERREUR: Nombre de ports invalide ! Un service n'a pas démarré correctement.${CEND}" 1>&2
-    echo ""
-    exit 1
-else
-    echo -e "${CGREEN}PORTS : 25, 143, 587, 993, 4190 [OK] ${CEND}"
-fi
-
-echo ""
 echo -e "${CGREEN}-----------------------------------------${CEND}"
 echo -e "${CGREEN}[  INSTALLATION EFFECTUÉE AVEC SUCCÈS ! ]${CEND}"
 echo -e "${CGREEN}-----------------------------------------${CEND}"

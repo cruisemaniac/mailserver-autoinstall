@@ -453,7 +453,7 @@ sed -i -e "s|\($CONF\['configured'\].*=\).*|\1 true;|"                 \
 echo ""
 echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
 read -p "> Sous-domaine de PostfixAdmin [Par défaut : postfixadmin] : " PFADOMAIN
-read -p "> Chemin du fichier PASSWD [Par défaut : /etc/nginx/passwd] : " PASSWDPATH
+read -p "> Chemin du fichier PASSWD [Par défaut : /etc/nginx/passwdfile] : " PASSWDPATH
 echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
 echo ""
 
@@ -462,7 +462,7 @@ if [ -z "${PFADOMAIN// }" ]; then
 fi
 
 if [ -z "${PASSWDPATH// }" ]; then
-    PASSWDPATH="/etc/nginx/passwd"
+    PASSWDPATH="/etc/nginx/passwdfile"
 fi
 
 if [[ ! -s "$PASSWDPATH" ]] || [[ ! -f "$PASSWDPATH" ]]; then

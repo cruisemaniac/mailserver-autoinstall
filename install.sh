@@ -1112,6 +1112,8 @@ clear
 
 # ##########################################################################
 
+if [ "$DEBIAN_VER" = "8" ]; then
+
 echo -e "${CCYAN}------------------------------${CEND}"
 echo -e "${CCYAN}[  INSTALLATION D'OPENDMARC  ]${CEND}"
 echo -e "${CCYAN}------------------------------${CEND}"
@@ -1157,6 +1159,8 @@ postconf -e smtpd_milters="unix:/opendkim/opendkim.sock, unix:/opendmarc/opendma
 
 smallLoader
 clear
+
+fi
 
 # ##########################################################################
 
@@ -1470,15 +1474,19 @@ fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-echo -n "-> Redémarrage d'OpenDMARC."
-service opendmarc restart
+if [ "$DEBIAN_VER" = "8" ]; then
 
-if [ $? -ne 0 ]; then
-    echo ""
-    echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDMARC.${CEND}\n\n" 1>&2
-    echo -e "${CRED}OPENDMARC: `service OpenDMARC status`${CEND}"  1>&2
-    echo ""
-    exit 1
+    echo -n "-> Redémarrage d'OpenDMARC."
+    service opendmarc restart
+
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDMARC.${CEND}\n\n" 1>&2
+        echo -e "${CRED}OPENDMARC: `service OpenDMARC status`${CEND}"  1>&2
+        echo ""
+        exit 1
+    fi
+
 fi
 
 echo -e " ${CGREEN}[OK]${CEND}"

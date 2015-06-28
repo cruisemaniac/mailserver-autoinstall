@@ -787,6 +787,11 @@ smtpd_client_restrictions =
 smtpd_sender_restrictions =
      reject_non_fqdn_sender,
      reject_unknown_sender_domain
+EOF
+
+if [ "$DEBIAN_VER" = "8" ]; then
+
+cat >> /etc/postfix/main.cf <<EOF
 
 smtpd_relay_restrictions =
      permit_mynetworks,
@@ -794,6 +799,8 @@ smtpd_relay_restrictions =
      permit_sasl_authenticated,
      reject_unauth_destination
 EOF
+
+fi
 
 echo ""
 echo -e "${CGREEN}-> Création du fichier mysql-virtual-mailbox-domains.cf ${CEND}"

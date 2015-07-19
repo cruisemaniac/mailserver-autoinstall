@@ -1115,7 +1115,7 @@ echo -e "${CGREEN}-> Création du répertoire /etc/opendkim/keys/${DOMAIN} ${CEN
 mkdir $DOMAIN && cd $DOMAIN
 
 echo -e "${CGREEN}-> Génération des clés de chiffrement ${CEND}"
-opendkim-genkey -s mail -d $DOMAIN -b 4096
+opendkim-genkey -s mail -d $DOMAIN -b 1024
 
 echo -e "${CGREEN}-> Modification des permissions des clés ${CEND}"
 chown opendkim:opendkim mail.private
@@ -1638,6 +1638,12 @@ echo ""
 echo -e "${CCYAN}----------------------------------------------------------${CEND}"
 cat /etc/opendkim/keys/$DOMAIN/mail.txt
 echo -e "${CCYAN}----------------------------------------------------------${CEND}"
+echo ""
+echo -e "${CRED}Pour des raisons de compatibilité avec certains registrars, la taille${CEND}"
+echo -e "${CRED}de la clé DKIM est de 1024 bits, vous pouvez générer une nouvelle clé${CEND}"
+echo -e "${CRED}si besoin avec la commande suivante :${CEND}"
+echo ""
+echo -e "${CYELLOW}opendkim-genkey -s mail -d ${DOMAIN} -b 2048${CEND}"
 echo ""
 
 echo -e "${CBROWN}Et pour finir vos enregistrements SPF :${CEND}"

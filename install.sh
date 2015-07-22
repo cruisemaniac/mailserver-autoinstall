@@ -405,7 +405,7 @@ if [ ! -d /var/www ]; then
 fi
 
 cd /var/www
-URLPFA="http://downloads.sourceforge.net/project/postfixadmin/postfixadmin/postfixadmin-${POSTFIXADMIN_VER}/postfixadmin-${POSTFIXADMIN_VER}.tar.gz"
+URLPFA="http://freefr.dl.sourceforge.net/project/postfixadmin/postfixadmin/postfixadmin-${POSTFIXADMIN_VER}/postfixadmin-${POSTFIXADMIN_VER}.tar.gz"
 
 until wget $URLPFA
 do

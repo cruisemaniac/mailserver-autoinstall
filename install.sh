@@ -89,7 +89,7 @@ command -v dig > /dev/null 2>&1 || { checkBin dnsutils >&2; exit 1; }
 dpkg -s postfix | grep "install ok installed" &> /dev/null
 
 # On vérifie que Postfix n'est pas installé
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
     echo ""
     echo -e "${CRED}/!\ ERREUR: Postfix est déjà installé sur le serveur.${CEND}" 1>&2
     echo ""
@@ -99,7 +99,7 @@ fi
 dpkg -s dovecot-core | grep "install ok installed" &> /dev/null
 
 # On vérifie que Dovecot n'est pas installé
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
     echo ""
     echo -e "${CRED}/!\ ERREUR: Dovecot est déjà installé sur le serveur.${CEND}" 1>&2
     echo ""
@@ -109,7 +109,7 @@ fi
 dpkg -s opendkim | grep "install ok installed" &> /dev/null
 
 # On vérifie que OpenDKIM n'est pas installé
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
     echo ""
     echo -e "${CRED}/!\ ERREUR: OpenDKIM est déjà installé sur le serveur.${CEND}" 1>&2
     echo ""
@@ -142,7 +142,7 @@ PORT=80
 # Récupération de l'adresse IP WAN
 WANIP=$(dig +short myip.opendns.com @resolver1.opendns.com)
 
-if [ -z "${WANIP// }" ]; then
+if [[ -z "${WANIP// }" ]]; then
     WANIP=$(curl -s icanhazip.com)
 fi
 
@@ -169,7 +169,7 @@ read -rp "> Veuillez saisir le nom d'hôte : " HOSTNAME
 read -rp "> Veuillez saisir le nom de domaine (format: domain.tld) : " DOMAIN
 read -rp "> Veuillez saisir le port du serveur web en écoute [Par défaut: 80] : " PORT
 
-if [ -z "${PORT// }" ]; then
+if [[ -z "${PORT// }" ]]; then
     PORT=80
 fi
 
@@ -272,7 +272,7 @@ echo ""
 read -rp "Souhaitez-vous utiliser SSL/TLS (HTTPS - port 443) pour les interfaces web ? [O]/n : " SSL_OK
 
 # Valeur par défaut
-if [ -z "${SSL_OK// }" ]; then
+if [[ -z "${SSL_OK// }" ]]; then
     SSL_OK="O"
 fi
 
@@ -324,7 +324,7 @@ echo ""
 # php5-imap pour Postfixadmin & php5-curl pour rainloop
 apt-get install -y postfix postfix-mysql php5-imap php5-curl
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation de Postfix.${CEND}" 1>&2
     echo ""
@@ -353,7 +353,7 @@ do
 
     # La base de donnée existe déjà ??
     # Si c'est le cas, on arrête l'installation
-    if [ $? -eq 0 ]; then
+    if [[ $? -eq 0 ]]; then
         echo ""
         echo -e "\n ${CRED}/!\ FATAL: La base de donnée Postfix existe déjà.${CEND}" 1>&2
         echo -e "${CRED}Si une installation a déjà été effectuée merci de${CEND}" 1>&2
@@ -378,7 +378,7 @@ SQLQUERY="CREATE USER 'postfix'@'localhost' IDENTIFIED BY '${PFPASSWD}'; \
 echo -e "${CGREEN}-> Création de l'utilisateur Postfix ${CEND}"
 mysql -uroot -p"$MYSQLPASSWD" "postfix" -e "$SQLQUERY" &> /dev/null
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: un problème est survenu lors de la création de l'utilisateur 'postfix' dans la BDD.${CEND}" 1>&2
     echo ""
@@ -398,7 +398,7 @@ echo ""
 echo -e "${CGREEN}-> Téléchargement de PostfixAdmin ${CEND}"
 echo ""
 
-if [ ! -d /var/www ]; then
+if [[ ! -d /var/www ]]; then
     mkdir -p /var/www
     chown -R www-data:www-data /var/www
 fi
@@ -417,7 +417,7 @@ do
 done
 
 # On vérifie la présence de l'archive
-if [ ! -f postfixadmin-$POSTFIXADMIN_VER.tar.gz ]; then
+if [[ ! -f postfixadmin-$POSTFIXADMIN_VER.tar.gz ]]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: L'archive de Postfixadmin est introuvable.${CEND}" 1>&2
     echo ""
@@ -456,11 +456,11 @@ read -rp "> Chemin du fichier PASSWD [Par défaut : /etc/nginx/passwdfile] : " P
 echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
 echo ""
 
-if [ -z "${PFADOMAIN// }" ]; then
+if [[ -z "${PFADOMAIN// }" ]]; then
     PFADOMAIN="postfixadmin"
 fi
 
-if [ -z "${PASSWDPATH// }" ]; then
+if [[ -z "${PASSWDPATH// }" ]]; then
     PASSWDPATH="/etc/nginx/passwdfile"
 fi
 
@@ -557,7 +557,7 @@ service php5-fpm restart
 echo -e "${CGREEN}-> Redémarrage de nginx pour prendre en compte le nouveau vhost.${CEND}"
 service nginx restart
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "${CRED}/!\ ECHEC: un problème est survenu lors du redémarrage de Nginx.${CEND}" 1>&2
     echo -e "${CRED}/!\ Ouvrez une nouvelle session dans un autre terminal et${CEND}" 1>&2
@@ -788,7 +788,7 @@ smtpd_sender_restrictions =
      reject_unknown_sender_domain
 EOF
 
-if [ "$DEBIAN_VER" = "8" ]; then
+if [[ "$DEBIAN_VER" = "8" ]]; then
 
 cat >> /etc/postfix/main.cf <<EOF
 
@@ -858,7 +858,7 @@ echo -e "${CGREEN}-> Installation de dovecot-core, dovecot-imapd, dovecot-lmtpd 
 echo ""
 apt-get install -y dovecot-core dovecot-imapd dovecot-lmtpd dovecot-mysql
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation de Dovecot.${CEND}" 1>&2
     echo ""
@@ -1005,7 +1005,7 @@ ssl_protocols = !SSLv2 !SSLv3
 ssl_cipher_list = ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA
 EOF
 
-if [ "$DEBIAN_VER" = "8" ]; then
+if [[ "$DEBIAN_VER" = "8" ]]; then
 
 cat >> /etc/dovecot/conf.d/10-ssl.conf <<EOF
 ssl_prefer_server_ciphers = yes
@@ -1028,7 +1028,7 @@ echo -e "${CGREEN}-> Installation de opendkim et opendkim-tools ${CEND}"
 echo ""
 apt-get install -y opendkim opendkim-tools
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation d'OpenDKIM.${CEND}" 1>&2
     echo ""
@@ -1126,7 +1126,7 @@ clear
 
 # ##########################################################################
 
-if [ "$DEBIAN_VER" = "8" ]; then
+if [[ "$DEBIAN_VER" = "8" ]]; then
 
 echo -e "${CCYAN}------------------------------${CEND}"
 echo -e "${CCYAN}[  INSTALLATION D'OPENDMARC  ]${CEND}"
@@ -1137,7 +1137,7 @@ echo -e "${CGREEN}-> Installation de opendmarc ${CEND}"
 echo ""
 apt-get install -y opendmarc
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation d'OpenDMARC.${CEND}" 1>&2
     echo ""
@@ -1187,7 +1187,7 @@ echo -e "${CGREEN}-> Installation de spamassassin et spamc${CEND}"
 echo ""
 apt-get install -y spamassassin spamc
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation de Spamassassin.${CEND}" 1>&2
     echo ""
@@ -1219,12 +1219,12 @@ EOF
 echo -e "${CGREEN}-> Modification du fichier /etc/default/spamassassin${CEND}"
 sed -i "s|\(CRON.*=\).*|\11|" /etc/default/spamassassin
 
-if [ "$DEBIAN_VER" = "7" ]; then
+if [[ "$DEBIAN_VER" = "7" ]]; then
     # ENABLED=1 pour les systèmes qui utilisent sysvinit
     sed -i "s|\(ENABLED.*=\).*|\11|" /etc/default/spamassassin
 fi
 
-if [ "$DEBIAN_VER" = "8" ]; then
+if [[ "$DEBIAN_VER" = "8" ]]; then
     # ENABLED=0 pour les systèmes qui utilisent systemd
     sed -i "s|\(ENABLED.*=\).*|\10|" /etc/default/spamassassin
 fi
@@ -1246,7 +1246,7 @@ echo -e "${CGREEN}-> Installation de dovecot-sieve et dovecot-managesieved${CEND
 echo ""
 apt-get install -y dovecot-sieve dovecot-managesieved
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n ${CRED}/!\ FATAL: Une erreur est survenue pendant l'installation de Sieve.${CEND}" 1>&2
     echo ""
@@ -1338,7 +1338,7 @@ read -rp "> Sous-domaine de Rainloop [Par défaut : webmail] : " RAINLOOPDOMAIN
 echo -e "${CCYAN}-------------------------------------------------${CEND}"
 echo ""
 
-if [ -z "${RAINLOOPDOMAIN// }" ]; then
+if [[ -z "${RAINLOOPDOMAIN// }" ]]; then
     RAINLOOPDOMAIN="webmail"
 fi
 
@@ -1427,7 +1427,7 @@ service php5-fpm restart
 echo -e "${CGREEN}-> Redémarrage de nginx pour prendre en compte le nouveau vhost.${CEND}"
 service nginx restart
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "${CRED}/!\ ECHEC: un problème est survenu lors du redémarrage de Nginx.${CEND}" 1>&2
     echo -e "${CRED}/!\ Ouvrez une nouvelle session dans un autre terminal et${CEND}" 1>&2
@@ -1450,7 +1450,7 @@ echo ""
 echo -n "-> Redémarrage de Postfix."
 service postfix restart
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Postfix.${CEND}" 1>&2
     echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}\n\n" 1>&2
@@ -1464,7 +1464,7 @@ echo -e " ${CGREEN}[OK]${CEND}"
 echo -n "-> Redémarrage de Dovecot."
 service dovecot restart
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Dovecot.${CEND}" 1>&2
     echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}\n\n" 1>&2
@@ -1478,7 +1478,7 @@ echo -e " ${CGREEN}[OK]${CEND}"
 echo -n "-> Redémarrage d'OpenDKIM."
 service opendkim restart
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDKIM.${CEND}\n\n" 1>&2
     echo -e "${CRED}OPENDKIM: $(service opendkim status)${CEND}"  1>&2
@@ -1488,12 +1488,12 @@ fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-if [ "$DEBIAN_VER" = "8" ]; then
+if [[ "$DEBIAN_VER" = "8" ]]; then
 
     echo -n "-> Redémarrage d'OpenDMARC."
     service opendmarc restart
 
-    if [ $? -ne 0 ]; then
+    if [[ $? -ne 0 ]]; then
         echo ""
         echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDMARC.${CEND}\n\n" 1>&2
         echo -e "${CRED}OPENDMARC: $(service OpenDMARC status)${CEND}"  1>&2
@@ -1508,7 +1508,7 @@ echo -e " ${CGREEN}[OK]${CEND}"
 echo -n "-> Redémarrage de SpamAssassin."
 service spamassassin restart
 
-if [ $? -ne 0 ]; then
+if [[ $? -ne 0 ]]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de SpamAssassin.${CEND}\n\n" 1>&2
     echo -e "${CRED}SPAMASSASSIN: $(service spamassassin status)${CEND}"  1>&2
@@ -1518,7 +1518,7 @@ fi
 
 echo -e " ${CGREEN}[OK]${CEND}"
 
-if [ "$DEBIAN_VER" = "8" ]; then
+if [[ "$DEBIAN_VER" = "8" ]]; then
 
     echo -e "\n${CGREEN}-> Activation des services via Systemd\n${CEND}"
     systemctl enable postfix.service

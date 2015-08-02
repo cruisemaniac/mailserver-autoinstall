@@ -890,6 +890,7 @@ EOF
 echo -e "${CGREEN}-> Mise en place du fichier /etc/dovecot/conf.d/10-mail.conf ${CEND}"
 cat > /etc/dovecot/conf.d/10-mail.conf <<EOF
 mail_location = maildir:/var/mail/vhosts/%d/%n/mail
+maildir_stat_dirs=yes
 
 namespace inbox {
     inbox = yes

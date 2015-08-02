@@ -32,7 +32,6 @@ CEND="${CSI}0m"
 CRED="${CSI}1;31m"
 CGREEN="${CSI}1;32m"
 CYELLOW="${CSI}1;33m"
-CBLUE="${CSI}1;34m"
 CPURPLE="${CSI}1;35m"
 CCYAN="${CSI}1;36m"
 CBROWN="${CSI}0;33m"
@@ -63,7 +62,7 @@ smallLoader() {
     echo -ne '[ + + + + + + + + + ] Appuyez sur [ENTRÉE] pour continuer... \r'
     echo -ne '\n'
 
-    read
+    read -rr
 }
 
 checkBin() {
@@ -71,19 +70,19 @@ checkBin() {
 }
 
 # Vérification des pré-requis
-command -v dpkg > /dev/null 2>&1 || { echo `checkBin dpkg`    >&2; exit 1; }
-command -v apt-get > /dev/null 2>&1 || { echo `checkBin apt-get` >&2; exit 1; }
-command -v mysql > /dev/null 2>&1 || { echo `checkBin mysql` >&2; exit 1; }
-command -v mysqladmin > /dev/null 2>&1 || { echo `checkBin mysqladmin` >&2; exit 1; }
-command -v wget > /dev/null 2>&1 || { echo `checkBin wget` >&2; exit 1; }
-command -v tar > /dev/null 2>&1 || { echo `checkBin tar` >&2; exit 1; }
-command -v openssl > /dev/null 2>&1 || { echo `checkBin openssl` >&2; exit 1; }
-command -v unzip > /dev/null 2>&1 || { echo `checkBin unzip` >&2; exit 1; }
-command -v strings > /dev/null 2>&1 || { echo `checkBin binutils` >&2; exit 1; }
-command -v nginx > /dev/null 2>&1 || { echo `checkBin nginx` >&2; exit 1; }
-command -v git > /dev/null 2>&1 || { echo `checkBin git-core` >&2; exit 1; }
-command -v curl > /dev/null 2>&1 || { echo `checkBin curl` >&2; exit 1; }
-command -v dig > /dev/null 2>&1 || { echo `checkBin dnsutils` >&2; exit 1; }
+command -v dpkg > /dev/null 2>&1 || { checkBin dpkg >&2; exit 1; }
+command -v apt-get > /dev/null 2>&1 || { checkBin apt-get >&2; exit 1; }
+command -v mysql > /dev/null 2>&1 || { checkBin mysql >&2; exit 1; }
+command -v mysqladmin > /dev/null 2>&1 || { checkBin mysqladmin >&2; exit 1; }
+command -v wget > /dev/null 2>&1 || { checkBin wget >&2; exit 1; }
+command -v tar > /dev/null 2>&1 || { checkBin tar >&2; exit 1; }
+command -v openssl > /dev/null 2>&1 || { checkBin openssl >&2; exit 1; }
+command -v unzip > /dev/null 2>&1 || { checkBin unzip >&2; exit 1; }
+command -v strings > /dev/null 2>&1 || { checkBin binutils >&2; exit 1; }
+command -v nginx > /dev/null 2>&1 || { checkBin nginx >&2; exit 1; }
+command -v git > /dev/null 2>&1 || { checkBin git-core >&2; exit 1; }
+command -v curl > /dev/null 2>&1 || { checkBin curl >&2; exit 1; }
+command -v dig > /dev/null 2>&1 || { checkBin dnsutils >&2; exit 1; }
 
 # ##########################################################################
 
@@ -161,14 +160,14 @@ echo ""
 echo -e "${CCYAN}-----------------------------------------------------------------------${CEND}"
 echo ""
 
-read -p "Souhaitez-vous les modifier ? o/[N] : " REPFQDN
+read -rp "Souhaitez-vous les modifier ? o/[N] : " REPFQDN
 
 if [[ "$REPFQDN" = "O" ]] || [[ "$REPFQDN" = "o" ]]; then
 
 echo ""
-read -p "> Veuillez saisir le nom d'hôte : " HOSTNAME
-read -p "> Veuillez saisir le nom de domaine (format: domain.tld) : " DOMAIN
-read -p "> Veuillez saisir le port du serveur web en écoute [Par défaut: 80] : " PORT
+read -rp "> Veuillez saisir le nom d'hôte : " HOSTNAME
+read -rp "> Veuillez saisir le nom de domaine (format: domain.tld) : " DOMAIN
+read -rp "> Veuillez saisir le port du serveur web en écoute [Par défaut: 80] : " PORT
 
 if [ -z "${PORT// }" ]; then
     PORT=80
@@ -177,7 +176,7 @@ fi
 FQDN="${HOSTNAME}.${DOMAIN}"
 
 # Modification du nom d'hôte
-echo $HOSTNAME > /etc/hostname
+echo "$HOSTNAME" > /etc/hostname
 
 # Modification du FQDN
 cat > /etc/hosts <<EOF
@@ -213,7 +212,7 @@ echo -e "${CCYAN}[ Création des certificats SSL ]${CEND}"
 echo -e "${CCYAN}--------------------------------${CEND}"
 echo ""
 
-cd /etc/ssl/
+cd /etc/ssl/ || exit
 
 echo -e "${CGREEN}-> Création de l'autorité de certification${CEND}"
 openssl genrsa -out mailserver_ca.key 4096
@@ -270,7 +269,7 @@ chmod 444 mailserver_dovecot.crt
 # Si on a redirigé le port 80 vers un autre port, cela peut vouloir dire que le 443 n'est pas non plus accessible, NAT, VM, ...
 # On demande si on veut faire du HTTPS
 echo ""
-read -p "Souhaitez-vous utiliser SSL/TLS (HTTPS - port 443) pour les interfaces web ? [O]/n : " SSL_OK
+read -rp "Souhaitez-vous utiliser SSL/TLS (HTTPS - port 443) pour les interfaces web ? [O]/n : " SSL_OK
 
 # Valeur par défaut
 if [ -z "${SSL_OK// }" ]; then
@@ -342,13 +341,13 @@ echo ""
 
 echo ""
 echo -e "${CGREEN}------------------------------------------------------------------${CEND}"
-read -sp "> Veuillez saisir le mot de passe de l'utilisateur root de MySQL : " MYSQLPASSWD
+read -rsp "> Veuillez saisir le mot de passe de l'utilisateur root de MySQL : " MYSQLPASSWD
 echo ""
 echo -e "${CGREEN}------------------------------------------------------------------${CEND}"
 echo ""
 
 echo -e "${CGREEN}-> Création de la base de donnée Postfix ${CEND}"
-until mysqladmin -uroot -p$MYSQLPASSWD create postfix &> /tmp/mysql-resp.tmp
+until mysqladmin -uroot -p"$MYSQLPASSWD" create postfix &> /tmp/mysql-resp.tmp
 do
     fgrep -q "database exists" /tmp/mysql-resp.tmp
 
@@ -366,7 +365,7 @@ do
 
     # La base de donnée n'existe pas donc c'est le mot de passe qui n'est pas bon
     echo -e "${CRED}\n /!\ ERREUR: Mot de passe root incorrect \n ${CEND}" 1>&2
-    read -sp "> Veuillez re-saisir le mot de passe : " MYSQLPASSWD
+    read -rsp "> Veuillez re-saisir le mot de passe : " MYSQLPASSWD
     echo -e ""
 done
 
@@ -377,7 +376,7 @@ SQLQUERY="CREATE USER 'postfix'@'localhost' IDENTIFIED BY '${PFPASSWD}'; \
           GRANT ALL PRIVILEGES ON postfix.* TO 'postfix'@'localhost';"
 
 echo -e "${CGREEN}-> Création de l'utilisateur Postfix ${CEND}"
-mysql -uroot -p$MYSQLPASSWD "postfix" -e "$SQLQUERY" &> /dev/null
+mysql -uroot -p"$MYSQLPASSWD" "postfix" -e "$SQLQUERY" &> /dev/null
 
 if [ $? -ne 0 ]; then
     echo ""
@@ -404,7 +403,7 @@ if [ ! -d /var/www ]; then
     chown -R www-data:www-data /var/www
 fi
 
-cd /var/www
+cd /var/www || exit
 URLPFA="http://freefr.dl.sourceforge.net/project/postfixadmin/postfixadmin/postfixadmin-${POSTFIXADMIN_VER}/postfixadmin-${POSTFIXADMIN_VER}.tar.gz"
 
 until wget $URLPFA
@@ -413,7 +412,7 @@ do
     echo -e "${CRED}/!\ Merci de rapporter cette erreur ici :${CEND}" 1>&2
     echo -e "${CCYAN}-> https://github.com/hardware/mailserver-autoinstall/issues${CEND} \n" 1>&2
     echo "> Veuillez saisir une autre URL pour que le script puisse télécharger PostfixAdmin : "
-    read -p "[URL] : " URLPFA
+    read -rp "[URL] : " URLPFA
     echo -e ""
 done
 
@@ -452,8 +451,8 @@ sed -i -e "s|\($CONF\['configured'\].*=\).*|\1 true;|"                 \
 
 echo ""
 echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
-read -p "> Sous-domaine de PostfixAdmin [Par défaut : postfixadmin] : " PFADOMAIN
-read -p "> Chemin du fichier PASSWD [Par défaut : /etc/nginx/passwdfile] : " PASSWDPATH
+read -rp "> Sous-domaine de PostfixAdmin [Par défaut : postfixadmin] : " PFADOMAIN
+read -rp "> Chemin du fichier PASSWD [Par défaut : /etc/nginx/passwdfile] : " PASSWDPATH
 echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
 echo ""
 
@@ -473,8 +472,8 @@ if [[ ! -s "$PASSWDPATH" ]] || [[ ! -f "$PASSWDPATH" ]]; then
     echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
     echo -e "${CCYAN}Le fichier ${PASSWDPATH} est vide ou n'existe pas.${CEND}"
     echo -e "${CCYAN}Veuillez entrer les informations suivantes :${CEND}"
-    read -p "> Nom d'utilisateur [Par défaut : Admin] : " USERAUTH
-    read -sp "> Mot de passe [Par défaut : 1234] : " PASSWDAUTH
+    read -rp "> Nom d'utilisateur [Par défaut : Admin] : " USERAUTH
+    read -rsp "> Mot de passe [Par défaut : 1234] : " PASSWDAUTH
     echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
     printf "${USERAUTH}:$(openssl passwd -crypt ${PASSWDAUTH})\n" >> $PASSWDPATH
 
@@ -586,7 +585,7 @@ echo ""
 echo -e "${CBROWN}Veuillez vous assurer que tous les pré-requis ont été validés.${CEND}"
 echo -e "${CBROWN}Une fois votre compte administrateur créé, saisissez le hash généré.${CEND}"
 echo ""
-read -p "> Veuillez saisir le hash généré par le setup : " PFAHASH
+read -rp "> Veuillez saisir le hash généré par le setup : " PFAHASH
 echo ""
 echo -e "${CBROWN}---------------------------------------------------------------------------${CEND}"
 echo ""
@@ -597,7 +596,7 @@ echo ""
 # Exemple : ffdeb741c58db80d060ddb170af4623a:54e0ac9a55d69c5e53d214c7ad7f1e3df40a3caa
 while [ ${#PFAHASH} -ne 73 ]; do
     echo -e "${CRED}\n/!\ HASH invalide !${CEND}" 1>&2
-    read -p "> Veuillez saisir de nouveau le hash généré par le setup : " PFAHASH
+    read -rp "> Veuillez saisir de nouveau le hash généré par le setup : " PFAHASH
     echo -e ""
 done
 
@@ -868,7 +867,7 @@ fi
 
 echo ""
 echo -e "${CGREEN}-> Création du conteneur MAILDIR ${CEND}"
-mkdir -p /var/mail/vhosts/${DOMAIN}
+mkdir -p /var/mail/vhosts/"${DOMAIN}"
 
 echo -e "${CGREEN}-> Création d'un nouvel utilisateur nommé vmail avec un UID/GID de 5000 ${CEND}"
 groupadd -g 5000 vmail
@@ -1109,13 +1108,13 @@ echo -e "${CPURPLE}[  CREATION DES CLÉS DE SÉCURITÉ  ]${CEND}"
 echo -e "${CPURPLE}-----------------------------------${CEND}"
 echo ""
 
-cd /etc/opendkim/keys
+cd /etc/opendkim/keys || exit
 
 echo -e "${CGREEN}-> Création du répertoire /etc/opendkim/keys/${DOMAIN} ${CEND}"
-mkdir $DOMAIN && cd $DOMAIN
+mkdir "$DOMAIN" && cd "$DOMAIN" || exit
 
 echo -e "${CGREEN}-> Génération des clés de chiffrement ${CEND}"
-opendkim-genkey -s mail -d $DOMAIN -b 1024
+opendkim-genkey -s mail -d "$DOMAIN" -b 1024
 
 echo -e "${CGREEN}-> Modification des permissions des clés ${CEND}"
 chown opendkim:opendkim mail.private
@@ -1314,7 +1313,7 @@ do
     echo -e "${CRED}/!\ Merci de rapporter cette erreur ici :${CEND}" 1>&2
     echo -e "${CCYAN}-> https://github.com/hardware/mailserver-autoinstall/issues${CEND} \n" 1>&2
     echo "> Veuillez saisir une autre URL pour que le script puisse télécharger Rainloop : "
-    read -p "[URL] : " URLRAINLOOP
+    read -rp "[URL] : " URLRAINLOOP
     echo -e ""
 done
 
@@ -1325,7 +1324,7 @@ echo -e "${CGREEN}-> Décompression de Rainloop dans le répertoire /var/www/rai
 unzip rainloop-latest.zip -d /var/www/rainloop > /dev/null
 
 rm -rf rainloop-latest.zip
-cd /var/www/rainloop
+cd /var/www/rainloop || exit
 
 echo -e "${CGREEN}-> Modification des permissions ${CEND}"
 find . -type d -exec chmod 755 {} \;
@@ -1334,7 +1333,7 @@ chown -R www-data:www-data .
 
 echo ""
 echo -e "${CCYAN}-------------------------------------------------${CEND}"
-read -p "> Sous-domaine de Rainloop [Par défaut : webmail] : " RAINLOOPDOMAIN
+read -rp "> Sous-domaine de Rainloop [Par défaut : webmail] : " RAINLOOPDOMAIN
 echo -e "${CCYAN}-------------------------------------------------${CEND}"
 echo ""
 
@@ -1454,7 +1453,7 @@ if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Postfix.${CEND}" 1>&2
     echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}\n\n" 1>&2
-    echo -e "${CRED}POSTFIX: `service postfix status`${CEND}"  1>&2
+    echo -e "${CRED}POSTFIX: $(service postfix status)${CEND}"  1>&2
     echo ""
     exit 1
 fi
@@ -1468,7 +1467,7 @@ if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de Dovecot.${CEND}" 1>&2
     echo -e "${CRED}/!\ Consultez le fichier de log /var/log/mail.log${CEND}\n\n" 1>&2
-    echo -e "${CRED}DOVECOT: `service dovecot status`${CEND}"  1>&2
+    echo -e "${CRED}DOVECOT: $(service dovecot status)${CEND}"  1>&2
     echo ""
     exit 1
 fi
@@ -1481,7 +1480,7 @@ service opendkim restart
 if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDKIM.${CEND}\n\n" 1>&2
-    echo -e "${CRED}OPENDKIM: `service opendkim status`${CEND}"  1>&2
+    echo -e "${CRED}OPENDKIM: $(service opendkim status)${CEND}"  1>&2
     echo ""
     exit 1
 fi
@@ -1496,7 +1495,7 @@ if [ "$DEBIAN_VER" = "8" ]; then
     if [ $? -ne 0 ]; then
         echo ""
         echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage d'OpenDMARC.${CEND}\n\n" 1>&2
-        echo -e "${CRED}OPENDMARC: `service OpenDMARC status`${CEND}"  1>&2
+        echo -e "${CRED}OPENDMARC: $(service OpenDMARC status)${CEND}"  1>&2
         echo ""
         exit 1
     fi
@@ -1511,7 +1510,7 @@ service spamassassin restart
 if [ $? -ne 0 ]; then
     echo ""
     echo -e "\n${CRED}/!\ FATAL: un problème est survenu lors du redémarrage de SpamAssassin.${CEND}\n\n" 1>&2
-    echo -e "${CRED}SPAMASSASSIN: `service spamassassin status`${CEND}"  1>&2
+    echo -e "${CRED}SPAMASSASSIN: $(service spamassassin status)${CEND}"  1>&2
     echo ""
     exit 1
 fi
@@ -1636,7 +1635,7 @@ echo ""
 echo -e "${CBROWN}Ensuite ajoutez votre enregistrement DKIM :${CEND}"
 echo ""
 echo -e "${CCYAN}----------------------------------------------------------${CEND}"
-cat /etc/opendkim/keys/$DOMAIN/mail.txt
+cat /etc/opendkim/keys/"$DOMAIN"/mail.txt
 echo -e "${CCYAN}----------------------------------------------------------${CEND}"
 echo ""
 echo -e "${CRED}Pour des raisons de compatibilité avec certains registrars, la taille${CEND}"

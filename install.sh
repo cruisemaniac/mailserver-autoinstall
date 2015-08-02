@@ -62,7 +62,7 @@ smallLoader() {
     echo -ne '[ + + + + + + + + + ] Appuyez sur [ENTRÉE] pour continuer... \r'
     echo -ne '\n'
 
-    read -rr
+    read -r
 }
 
 checkBin() {

@@ -140,7 +140,7 @@ FQDN=$(hostname -f 2> /dev/null)     # hostname.domain.tld
 PORT=80
 
 # Récupération de l'adresse IP WAN
-WANIP=$(dig +short myip.opendns.com @resolver1.opendns.com)
+WANIP=$(dig o-o.myaddr.l.google.com @ns1.google.com txt +short | sed -e '2d;s/"//g\')
 
 if [[ -z "${WANIP// }" ]]; then
     WANIP=$(curl -s icanhazip.com)

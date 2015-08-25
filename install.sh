@@ -216,7 +216,7 @@ cd /etc/ssl/ || exit
 
 echo -e "${CGREEN}-> Création de l'autorité de certification${CEND}"
 openssl genrsa -out mailserver_ca.key 4096
-openssl req -x509 -new -nodes -days 3658 -key mailserver_ca.key -out mailserver_ca.crt<<EOF
+openssl req -x509 -new -nodes -days 3658 -sha256 -key mailserver_ca.key -out mailserver_ca.crt<<EOF
 FR
 France
 Paris
@@ -228,7 +228,7 @@ EOF
 
 echo -e "\n\n${CGREEN}-> Création du certificat de Postfix${CEND}"
 openssl genrsa -out mailserver_postfix.key 4096
-openssl req -new -key mailserver_postfix.key -out mailserver_postfix.csr<<EOF
+openssl req -new -sha256 -key mailserver_postfix.key -out mailserver_postfix.csr<<EOF
 FR
 France
 Paris
@@ -242,7 +242,7 @@ EOF
 
 echo -e "\n\n${CGREEN}-> Création du certificat de Dovecot${CEND}"
 openssl genrsa -out mailserver_dovecot.key 4096
-openssl req -new -key mailserver_dovecot.key -out mailserver_dovecot.csr<<EOF
+openssl req -new -sha256 -key mailserver_dovecot.key -out mailserver_dovecot.csr<<EOF
 FR
 France
 Paris
@@ -255,8 +255,8 @@ admin@${DOMAIN}
 EOF
 
 echo -e "\n\n${CGREEN}-> Signature des certificats${CEND}"
-openssl x509 -req -days 3658 -in mailserver_postfix.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_postfix.crt
-openssl x509 -req -days 3658 -in mailserver_dovecot.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_dovecot.crt
+openssl x509 -req -days 3658 -sha256 -in mailserver_postfix.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_postfix.crt
+openssl x509 -req -days 3658 -sha256 -in mailserver_dovecot.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_dovecot.crt
 
 echo -e "\n${CGREEN}-> Modification des permissions${CEND}"
 chmod 400 mailserver_ca.key
@@ -280,7 +280,7 @@ if [[ "$SSL_OK" = "O" ]] || [[ "$SSL_OK" = "o" ]]; then
 
     echo -e "\n${CGREEN}-> Création du certificat de Nginx${CEND}"
     openssl genrsa -out mailserver_nginx.key 4096
-    openssl req -new -key mailserver_nginx.key -out mailserver_nginx.csr<<EOF
+    openssl req -new -sha256 -key mailserver_nginx.key -out mailserver_nginx.csr<<EOF
 FR
 France
 Paris
@@ -292,7 +292,7 @@ admin@${DOMAIN}
 
 EOF
 
-    openssl x509 -req -days 3658 -in mailserver_nginx.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_nginx.crt
+    openssl x509 -req -days 3658 -sha256 -in mailserver_nginx.csr -CA mailserver_ca.crt -CAkey mailserver_ca.key -CAcreateserial -out mailserver_nginx.crt
 
     chmod 400 mailserver_nginx.key
     chmod 444 mailserver_nginx.crt

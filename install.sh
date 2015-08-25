@@ -502,7 +502,7 @@ server {
     ssl_certificate           /etc/ssl/certs/mailserver_nginx.crt;
     ssl_certificate_key       /etc/ssl/private/mailserver_nginx.key;
     ssl_protocols             TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers               "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA256:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:DHE-RSA-AES256-GCM-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES256-GCM-SHA256:AES256-GCM-SHA384:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
+    ssl_ciphers               "EECDH+AESGCM:AES128+EECDH:AES256+EECDH";
     ssl_prefer_server_ciphers on;
     ssl_session_cache         shared:SSL:10m;
     ssl_session_timeout       10m;
@@ -684,8 +684,8 @@ alias_database = hash:/etc/aliases
 smtp_tls_loglevel            = 1
 smtp_tls_security_level      = may
 smtp_tls_CAfile              = /etc/ssl/certs/mailserver_ca.crt
-smtp_tls_protocols           = !SSLv2, !SSLv3, TLSv1
-smtp_tls_mandatory_protocols = !SSLv2, !SSLv3, TLSv1
+smtp_tls_protocols           = !SSLv2, !SSLv3
+smtp_tls_mandatory_protocols = !SSLv2, !SSLv3
 smtp_tls_mandatory_ciphers   = high
 smtp_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CDC3-SHA, KRB5-DE5, CBC3-SHA
 
@@ -695,8 +695,8 @@ smtpd_tls_loglevel            = 1
 smtpd_tls_auth_only           = yes
 smtpd_tls_security_level      = may
 smtpd_tls_received_header     = yes
-smtpd_tls_protocols           = !SSLv2, !SSLv3, TLSv1
-smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, TLSv1
+smtpd_tls_protocols           = !SSLv2, !SSLv3
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
 smtpd_tls_mandatory_ciphers   = high
 smtpd_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CDC3-SHA, KRB5-DE5, CBC3-SHA
 smtpd_tls_eecdh_grade         = ultra
@@ -710,7 +710,7 @@ smtp_tls_session_cache_database  = btree:\${data_directory}/smtp_scache
 smtpd_tls_session_cache_database = btree:\${data_directory}/smtpd_scache
 lmtp_tls_session_cache_database  = btree:\${data_directory}/lmtp_scache
 
-tls_eecdh_strong_curve = prime256v1
+tls_high_cipherlist    = EECDH+AESGCM:AES128+EECDH:AES256+EECDH
 tls_eecdh_ultra_curve  = secp521r1
 tls_preempt_cipherlist = yes
 tls_random_source      = dev:/dev/urandom
@@ -1002,7 +1002,7 @@ ssl = required
 ssl_cert = </etc/ssl/certs/mailserver_dovecot.crt
 ssl_key = </etc/ssl/private/mailserver_dovecot.key
 ssl_protocols = !SSLv2 !SSLv3
-ssl_cipher_list = ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA
+ssl_cipher_list = EECDH+AESGCM:AES128+EECDH:AES256+EECDH
 EOF
 
 if [[ "$DEBIAN_VER" = "8" ]]; then
@@ -1362,7 +1362,7 @@ server {
     ssl_certificate           /etc/ssl/certs/mailserver_nginx.crt;
     ssl_certificate_key       /etc/ssl/private/mailserver_nginx.key;
     ssl_protocols             TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers               "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA256:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:DHE-RSA-AES256-GCM-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES256-GCM-SHA256:AES256-GCM-SHA384:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4";
+    ssl_ciphers               "EECDH+AESGCM:AES128+EECDH:AES256+EECDH";
     ssl_prefer_server_ciphers on;
     ssl_session_cache         shared:SSL:10m;
     ssl_session_timeout       10m;

@@ -1004,7 +1004,7 @@ ssl = required
 ssl_cert = </etc/ssl/certs/mailserver_dovecot.crt
 ssl_key = </etc/ssl/private/mailserver_dovecot.key
 ssl_protocols = !SSLv2 !SSLv3
-ssl_cipher_list = EECDH+AESGCM:AES128+EECDH:AES256+EECDH
+ssl_cipher_list = ALL:!aNULL:!eNULL:!LOW:!MEDIUM:!EXP:!RC2:!RC4:!DES:!3DES:!MD5:!PSK:!SRP:!DSS:!AECDH:!ADH:@STRENGTH
 EOF
 
 if [[ "$DEBIAN_VER" = "8" ]]; then

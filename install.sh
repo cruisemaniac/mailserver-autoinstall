@@ -687,7 +687,7 @@ smtp_tls_CAfile              = /etc/ssl/certs/mailserver_ca.crt
 smtp_tls_protocols           = !SSLv2, !SSLv3
 smtp_tls_mandatory_protocols = !SSLv2, !SSLv3
 smtp_tls_mandatory_ciphers   = high
-smtp_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CDC3-SHA, KRB5-DE5, CBC3-SHA
+smtp_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, 3DES, RC2, RC4, MD5, PSK, SRP, DSS, AECDH, ADH
 
 # SMTPD ( INCOMING )
 # ----------------------------------------------------------------------
@@ -698,7 +698,7 @@ smtpd_tls_received_header     = yes
 smtpd_tls_protocols           = !SSLv2, !SSLv3
 smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
 smtpd_tls_mandatory_ciphers   = high
-smtpd_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CDC3-SHA, KRB5-DE5, CBC3-SHA
+smtpd_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, 3DES, RC2, RC4, MD5, PSK, SRP, DSS, AECDH, ADH
 smtpd_tls_eecdh_grade         = ultra
 smtpd_tls_CAfile              = \$smtp_tls_CAfile
 smtpd_tls_cert_file           = /etc/ssl/certs/mailserver_postfix.crt
@@ -710,7 +710,9 @@ smtp_tls_session_cache_database  = btree:\${data_directory}/smtp_scache
 smtpd_tls_session_cache_database = btree:\${data_directory}/smtpd_scache
 lmtp_tls_session_cache_database  = btree:\${data_directory}/lmtp_scache
 
-tls_high_cipherlist    = EECDH+AESGCM:AES128+EECDH:AES256+EECDH
+# Par défaut : aNULL:-aNULL:ALL:!EXPORT:!LOW:!MEDIUM:+RC4:@STRENGTH
+# Actuelle avec la directive smtpd_tls_exclude_ciphers :
+# tls_high_cipherlist  = ALL:!aNULL:!eNULL:!LOW:!MEDIUM:!EXP:!RC2:!RC4:!DES:!3DES:!MD5:!PSK:!SRP:!DSS:!AECDH:!ADH:@STRENGTH
 tls_eecdh_ultra_curve  = secp521r1
 tls_preempt_cipherlist = yes
 tls_random_source      = dev:/dev/urandom

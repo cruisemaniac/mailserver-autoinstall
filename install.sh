@@ -502,11 +502,11 @@ server {
     ssl_certificate           /etc/ssl/certs/mailserver_nginx.crt;
     ssl_certificate_key       /etc/ssl/private/mailserver_nginx.key;
     ssl_protocols             TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers               "EECDH+AESGCM:AES128+EECDH:AES256+EECDH";
+    ssl_ciphers               "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK";
     ssl_prefer_server_ciphers on;
     ssl_session_cache         shared:SSL:10m;
     ssl_session_timeout       10m;
-    ssl_ecdh_curve            secp521r1;
+    ssl_ecdh_curve            secp384r1;
 
     add_header Strict-Transport-Security max-age=31536000;
 
@@ -699,7 +699,6 @@ smtpd_tls_protocols           = !SSLv2, !SSLv3
 smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
 smtpd_tls_mandatory_ciphers   = high
 smtpd_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, 3DES, RC2, RC4, MD5, PSK, SRP, DSS, AECDH, ADH
-smtpd_tls_eecdh_grade         = ultra
 smtpd_tls_CAfile              = \$smtp_tls_CAfile
 smtpd_tls_cert_file           = /etc/ssl/certs/mailserver_postfix.crt
 smtpd_tls_key_file            = /etc/ssl/private/mailserver_postfix.key
@@ -710,10 +709,6 @@ smtp_tls_session_cache_database  = btree:\${data_directory}/smtp_scache
 smtpd_tls_session_cache_database = btree:\${data_directory}/smtpd_scache
 lmtp_tls_session_cache_database  = btree:\${data_directory}/lmtp_scache
 
-# Par défaut : aNULL:-aNULL:ALL:!EXPORT:!LOW:!MEDIUM:+RC4:@STRENGTH
-# Actuelle avec la directive smtpd_tls_exclude_ciphers :
-# tls_high_cipherlist  = ALL:!aNULL:!eNULL:!LOW:!MEDIUM:!EXP:!RC2:!RC4:!DES:!3DES:!MD5:!PSK:!SRP:!DSS:!AECDH:!ADH:@STRENGTH
-tls_eecdh_ultra_curve  = secp521r1
 tls_preempt_cipherlist = yes
 tls_random_source      = dev:/dev/urandom
 
@@ -1364,11 +1359,11 @@ server {
     ssl_certificate           /etc/ssl/certs/mailserver_nginx.crt;
     ssl_certificate_key       /etc/ssl/private/mailserver_nginx.key;
     ssl_protocols             TLSv1 TLSv1.1 TLSv1.2;
-    ssl_ciphers               "EECDH+AESGCM:AES128+EECDH:AES256+EECDH";
+    ssl_ciphers               "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK";
     ssl_prefer_server_ciphers on;
     ssl_session_cache         shared:SSL:10m;
     ssl_session_timeout       10m;
-    ssl_ecdh_curve            secp521r1;
+    ssl_ecdh_curve            secp384r1;
 
     add_header Strict-Transport-Security max-age=31536000;
 

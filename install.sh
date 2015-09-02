@@ -10,7 +10,6 @@
 #
 # Pré-requis
 # Nginx, PHP, MySQL, OpenSSL (Un serveur LEMP fonctionnel)
-#
 # Tiré du tutoriel sur mondedie.fr disponible ici:
 # http://mondedie.fr/viewtopic.php?id=5302
 #
@@ -1599,7 +1598,7 @@ echo -e "${CBROWN} - Serveur entrant IMAP :${CEND} ${CGREEN}${FQDN}${CEND}"
 echo -e "${CBROWN} - Serveur sortant SMTP :${CEND} ${CGREEN}${FQDN}${CEND}"
 echo -e "${CBROWN} - Port IMAP :${CEND} ${CGREEN}993${CEND}"
 echo -e "${CBROWN} - Port SMTP :${CEND} ${CGREEN}587${CEND}"
-echo -e "${CBROWN} - Protocole de chiffrement IMAP :${CEND} ${CGREEN}SSL/TLS${CEND}"
+echo -e "${CBROWN} - Protocole de chiffrement IMAP :${CEND} ${CGREEN}TLS${CEND}"
 echo -e "${CBROWN} - Protocole de chiffrement SMTP :${CEND} ${CGREEN}STARTTLS${CEND}"
 echo -e "${CBROWN}---------------------------------------------------------------------------${CEND}"
 echo ""

@@ -1657,6 +1657,9 @@ echo -e "${CCYAN}----------------------------------------------------------${CEN
 echo -e "${CYELLOW}_dmarc    IN    TXT    \"v=DMARC1; p=reject; rua=mailto:postmaster@${DOMAIN}; ruf=mailto:admin@${DOMAIN}; fo=0; adkim=s; aspf=s; pct=100; rf=afrf; sp=reject\"${CEND}"
 echo -e "${CCYAN}----------------------------------------------------------${CEND}"
 echo ""
+echo -e "${CRED}Il faut mettre cet enregistrement uniquement si vous êtes sûr${CEND}"
+echo -e "${CRED}du fonctionnement des enregistrements DKIM/SPF (voir plus haut).${CEND}"
+echo ""
 
 echo -e "${CCYAN}-----------------${CEND}"
 echo -e "${CCYAN}[ FIN DU SCRIPT ]${CEND}"

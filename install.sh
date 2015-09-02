@@ -475,7 +475,8 @@ if [[ ! -s "$PASSWDPATH" ]] || [[ ! -f "$PASSWDPATH" ]]; then
     read -rp "> Nom d'utilisateur [Par défaut : Admin] : " USERAUTH
     read -rsp "> Mot de passe [Par défaut : 1234] : " PASSWDAUTH
     echo -e "${CCYAN}-----------------------------------------------------------${CEND}"
-    printf "${USERAUTH}:$(openssl passwd -crypt ${PASSWDAUTH})\n" >> $PASSWDPATH
+    # printf "${USERAUTH}:$(openssl passwd -crypt ${PASSWDAUTH})\n" >> $PASSWDPATH - crypt() Max 8 caractères
+    printf "${USERAUTH}:$(openssl passwd -apr1 ${PASSWDAUTH})\n" >> $PASSWDPATH # apr1 (Apache MD5) encryption
 
     smallLoader
     echo ""

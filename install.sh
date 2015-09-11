@@ -679,7 +679,7 @@ alias_database = hash:/etc/aliases
 ## TLS PARAMETERS ##
 ####################
 
-# SMTP ( OUTGOING )
+# SMTP ( OUTGOING / Client )
 # ----------------------------------------------------------------------
 smtp_tls_loglevel            = 1
 smtp_tls_security_level      = may
@@ -688,8 +688,9 @@ smtp_tls_protocols           = !SSLv2, !SSLv3
 smtp_tls_mandatory_protocols = !SSLv2, !SSLv3
 smtp_tls_mandatory_ciphers   = high
 smtp_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, 3DES, RC2, RC4, MD5, PSK, SRP, DSS, AECDH, ADH
+smtp_tls_note_starttls_offer = yes
 
-# SMTPD ( INCOMING )
+# SMTPD ( INCOMING / Server )
 # ----------------------------------------------------------------------
 smtpd_tls_loglevel            = 1
 smtpd_tls_auth_only           = yes
@@ -697,8 +698,18 @@ smtpd_tls_security_level      = may
 smtpd_tls_received_header     = yes
 smtpd_tls_protocols           = !SSLv2, !SSLv3
 smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
-smtpd_tls_mandatory_ciphers   = high
-smtpd_tls_exclude_ciphers     = aNULL, eNULL, EXPORT, DES, 3DES, RC2, RC4, MD5, PSK, SRP, DSS, AECDH, ADH
+smtpd_tls_mandatory_ciphers   = medium
+
+# Infos (voir : postconf -d)
+# Medium cipherlist = aNULL:-aNULL:ALL:!EXPORT:!LOW:+RC4:@STRENGTH
+# High cipherlist   = aNULL:-aNULL:ALL:!EXPORT:!LOW:!MEDIUM:+RC4:@STRENGTH
+
+# smtpd_tls_exclude_ciphers   = NE PAS modifier cette directive pour des raisons de compatibilité
+#                               avec les autres serveurs de mail afin d'éviter une erreur du type
+#                               "no shared cipher" ou "no cipher overlap" puis un fallback en
+#                               plain/text...
+# smtpd_tls_cipherlist        = Ne pas modifier non plus !
+
 smtpd_tls_CAfile              = \$smtp_tls_CAfile
 smtpd_tls_cert_file           = /etc/ssl/certs/mailserver_postfix.crt
 smtpd_tls_key_file            = /etc/ssl/private/mailserver_postfix.key

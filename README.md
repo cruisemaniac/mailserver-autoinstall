@@ -1,3 +1,5 @@
+**Ce script n'est plus maintenu, merci d'utiliser à la place [mon image docker](https://github.com/hardware/mailserver). Je considère cette méthode beaucoup plus fiable et rapide à mettre en place. Je continuerai d'apporter des mises à jour de sécurité si besoin mais le script décrit ici n'évoluera plus. Merci de votre compréhension.**
+
 Serveur de mail - Installation automatique
 ==========================================
 
